@@ -16,6 +16,12 @@ and compose them explicitly.
 
 **Python ≥ 3.12 · MIT · FastAPI · async-first**
 
+## What Apyra adds to FastAPI
+
+FastAPI already provides routing, dependency injection, and OpenAPI. Apyra is **not a replacement for FastAPI**: it packages optional backend infrastructure so applications can compose the integrations they actually need. Start with a small app and add database, authentication, storage, or events only when the use case calls for them.
+
+**Project status:** Early-stage (v0.1.0 source). APIs and package availability may change before a stable release. For now, the most reliable way to evaluate Apyra is to run the examples from this repository.
+
 ## Why Apyra?
 
 - **Modular by design.** `apyra-core` has zero FastAPI/infra dependencies. Add packages only
@@ -55,10 +61,12 @@ and compose them explicitly.
 
 ```bash
 # With uv (recommended)
-uv add apyra            # metapackage with all bundles
-# or pick only what you need
 uv add apyra-core apyra-fastapi
+# Optional: the apyra metapackage provides additional dependency bundles.
 ```
+
+If the packages are not yet available on PyPI, clone this repository and use the
+workspace setup below instead. Do not assume a PyPI release exists.
 
 ### 2. Create an app
 
@@ -86,7 +94,10 @@ app = create_app(
 ### 3. Run
 
 ```bash
-uv run uvicorn main:app --app-dir examples/minimal-api --host 0.0.0.0 --port 5000 --reload
+git clone https://github.com/amariwan/apyra.git
+cd apyra
+uv sync --all-packages --all-extras
+uv run uvicorn main:app --app-dir examples/minimal-api --host 127.0.0.1 --port 5000 --reload
 ```
 
 Then open <http://localhost:5000/docs>.
@@ -118,8 +129,9 @@ Run the full quality gate (lint + typecheck + tests):
 uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pyright && uv run pytest
 ```
 
-> Note: `just check` calls `test-all`, which currently collects no tests. Use the
-> command above (or `just lint` + the individual tools) until that is fixed.
+> The `just check` recipe runs lint, mypy, pyright, and the normal pytest suite.
+> The marker-filtered `just test-unit` and `just test-integration` recipes are not
+> equivalent to the full suite until all tests have appropriate markers.
 
 ## Architecture
 
@@ -137,7 +149,8 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md).
 
 - [ ] Stabilize public APIs and versioning policy
 - [ ] Publish packages to PyPI
-- [ ] Expand examples (auth, db, storage, cache, events, tasks)
+- [x] Add runnable examples for auth, database, storage, cache, and events
+- [ ] Add a runnable tasks example
 - [ ] Add integration tests across package boundaries
 - [ ] Improve package-level READMEs and API docs
 - [ ] Add a documentation site
