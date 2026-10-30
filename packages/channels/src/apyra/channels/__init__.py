@@ -1,0 +1,36 @@
+"""Realtime channel primitives for Apyra."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from .factory import close_channel_layer, get_channel_layer
+from .layer import ChannelLayer, ChannelSubscription
+from .memory import MemoryChannelLayer
+
+InMemoryChannelLayer = MemoryChannelLayer
+from .redis import RedisChannelLayer, RedisClient
+from .settings import ChannelBackend, ChannelSettings, get_channel_settings
+
+WebSocketChannel: Any = None
+try:
+    from .websocket import WebSocketChannel as _WebSocketChannel
+
+    WebSocketChannel = _WebSocketChannel
+except ImportError:  # pragma: no cover - FastAPI is an optional integration dependency
+    pass
+
+__all__ = [
+    "ChannelBackend",
+    "ChannelLayer",
+    "ChannelSettings",
+    "ChannelSubscription",
+    "InMemoryChannelLayer",
+    "MemoryChannelLayer",
+    "RedisChannelLayer",
+    "RedisClient",
+    "WebSocketChannel",
+    "close_channel_layer",
+    "get_channel_layer",
+    "get_channel_settings",
+]

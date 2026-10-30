@@ -1,0 +1,36 @@
+[project]
+name = "apyra-cli"
+version = "0.1.0"
+description = "Developer CLI for Apyra."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "amariwan" }]
+dependencies = [
+    "apyra-core>=0.1.0,<0.2.0",
+]
+
+[project.scripts]
+apyra = "apyra.cli.main:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["apyra.cli"]
+namespace = true
+
+[tool.uv.sources]
+apyra-core = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]

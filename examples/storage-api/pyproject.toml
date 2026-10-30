@@ -1,0 +1,10 @@
+[project]
+name = "apyra-storage-api-example"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["apyra-fastapi>=0.1.0,<0.2.0", "apyra-storage>=0.1.0,<0.2.0", "python-multipart>=0.0.9"]
+
+[tool.uv.sources]
+apyra-fastapi = { path = "../../packages/fastapi", editable = true }
+apyra-core = { path = "../../packages/core", editable = true }
+apyra-storage = { path = "../../packages/storage", editable = true }

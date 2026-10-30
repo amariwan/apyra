@@ -1,0 +1,31 @@
+[project]
+name = "apyra-core"
+version = "0.1.0"
+description = "Core contracts, settings, and framework primitives for Apyra."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "amariwan" }]
+dependencies = [
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["apyra.core"]
+namespace = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]

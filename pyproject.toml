@@ -1,0 +1,77 @@
+[project]
+name = "apyra-workspace"
+version = "0.1.0"
+description = "Development workspace for the Apyra Python framework."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "amariwan" }]
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1,<2.0.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.3",
+    "mypy>=2.4.1",
+    "pyright>=1.1.414",
+    "httpx>=0.28.1",
+    "aiosqlite>=0.22.1",
+]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["packages", "tests"]
+python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["packages/core/src", "packages/fastapi/src"]
+markers = [
+    "unit: Fast isolated tests",
+    "integration: Tests across package boundaries",
+    "packaging: Build and installation tests",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["packages", "tests", "examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "S", "ASYNC", "PTH"]
+ignore = ["S101", "N999"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+namespace_packages = true
+mypy_path = "packages/core/src:packages/fastapi/src:packages/storage/src:packages/db/src:packages/auth/src:packages/cache/src:packages/observability/src:packages/email/src:packages/channels/src:packages/ai/src:packages/i18n/src:packages/events/src:packages/security/src:packages/tasks/src:packages/cli/src"
+packages = [
+    "apyra.core",
+    "apyra.fastapi",
+    "apyra.storage",
+    "apyra.db",
+    "apyra.auth",
+    "apyra.cache",
+    "apyra.observability",
+    "apyra.channels",
+    "apyra.ai",
+    "apyra.i18n",
+    "apyra.events",
+    "apyra.security",
+    "apyra.tasks",
+    "apyra.cli",
+]
+ignore_missing_imports = true
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+include = ["packages", "tests"]
+extraPaths = ["packages/core/src", "packages/fastapi/src"]

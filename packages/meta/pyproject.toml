@@ -1,0 +1,99 @@
+[project]
+name = "apyra"
+version = "0.1.0"
+description = "Metapackage and installation bundles for Apyra."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "amariwan" }]
+dependencies = [
+    "apyra-core>=0.1.0,<0.2.0",
+]
+
+[project.optional-dependencies]
+web = [
+    "apyra-fastapi>=0.1.0,<0.2.0",
+]
+database = [
+    "apyra-db>=0.1.0,<0.2.0",
+]
+storage = [
+    "apyra-storage>=0.1.0,<0.2.0",
+]
+auth = [
+    "apyra-auth>=0.1.0,<0.2.0",
+]
+cache = [
+    "apyra-cache>=0.1.0,<0.2.0",
+]
+ai = [
+    "apyra-ai>=0.1.0,<0.2.0",
+]
+observability = [
+    "apyra-observability>=0.1.0,<0.2.0",
+]
+email = [
+    "apyra-email>=0.1.0,<0.2.0",
+]
+channels = [
+    "apyra-channels>=0.1.0,<0.2.0",
+]
+events = [
+    "apyra-events>=0.1.0,<0.2.0",
+]
+security = [
+    "apyra-security>=0.1.0,<0.2.0",
+]
+tasks = [
+    "apyra-tasks>=0.1.0,<0.2.0",
+]
+i18n = [
+    "apyra-i18n>=0.1.0,<0.2.0",
+]
+cli = [
+    "apyra-cli>=0.1.0,<0.2.0",
+]
+production = [
+    "apyra-fastapi>=0.1.0,<0.2.0",
+    "apyra-observability>=0.1.0,<0.2.0",
+]
+all = [
+    "apyra-fastapi>=0.1.0,<0.2.0",
+    "apyra-db>=0.1.0,<0.2.0",
+    "apyra-storage>=0.1.0,<0.2.0",
+    "apyra-auth>=0.1.0,<0.2.0",
+    "apyra-cache>=0.1.0,<0.2.0",
+    "apyra-ai>=0.1.0,<0.2.0",
+    "apyra-observability>=0.1.0,<0.2.0",
+    "apyra-email>=0.1.0,<0.2.0",
+    "apyra-channels>=0.1.0,<0.2.0",
+    "apyra-events>=0.1.0,<0.2.0",
+    "apyra-security>=0.1.0,<0.2.0",
+    "apyra-tasks>=0.1.0,<0.2.0",
+    "apyra-i18n>=0.1.0,<0.2.0",
+    "apyra-cli>=0.1.0,<0.2.0",
+]
+
+[tool.uv.sources]
+apyra-core = { workspace = true }
+apyra-fastapi = { workspace = true }
+apyra-db = { workspace = true }
+apyra-storage = { workspace = true }
+apyra-auth = { workspace = true }
+apyra-cache = { workspace = true }
+apyra-ai = { workspace = true }
+apyra-observability = { workspace = true }
+apyra-email = { workspace = true }
+apyra-channels = { workspace = true }
+apyra-events = { workspace = true }
+apyra-security = { workspace = true }
+apyra-tasks = { workspace = true }
+apyra-i18n = { workspace = true }
+apyra-cli = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = []

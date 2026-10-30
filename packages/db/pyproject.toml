@@ -1,0 +1,41 @@
+[project]
+name = "apyra-db"
+version = "0.1.0"
+description = "Async database infrastructure for Apyra."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "amariwan" }]
+dependencies = [
+    "apyra-core>=0.1.0,<0.2.0",
+    "sqlalchemy>=2.0.30",
+    "greenlet>=3.0.0",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.29.0", "psycopg[binary]>=3.1.0"]
+mysql = ["asyncmy>=0.2.9", "pymysql>=1.1.0"]
+sqlite = ["aiosqlite>=0.20.0"]
+migrations = ["alembic>=1.13.0"]
+
+[tool.uv.sources]
+apyra-core = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["apyra.db"]
+namespace = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]

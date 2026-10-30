@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 682.71 908.5999999999998" width="682.71" height="908.5999999999998" style="--bg:#1a1b26;--fg:#a9b1d6;--line:#3d59a1;--accent:#7aa2f7;--muted:#565f89;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="arrowhead" markerWidth="8" markerHeight="5" refX="7" refY="2.5" orient="auto">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+  <marker id="arrowhead-start" markerWidth="8" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse">
+    <polygon points="8 0, 0 2.5, 8 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+</defs>
+<polyline class="edge" data-from="App" data-to="FastAPI" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="228.668,423.84999999999985 248.668,423.84999999999985 248.668,454.2999999999999 268.668,454.2999999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Core" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,58.45 448.4230000000001,58.45" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="DB" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,119.35 448.4230000000001,119.35" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Auth" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,180.25 448.4230000000001,180.25" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Storage" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,241.14999999999998 448.42300000000006,241.14999999999998" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Cache" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,302.04999999999995 448.4230000000001,302.04999999999995" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="AI" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,362.94999999999993 448.4230000000001,362.94999999999993" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Obs" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,423.8499999999999 448.4230000000001,423.8499999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Email" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,484.7499999999999 448.4230000000001,484.7499999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Channels" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,545.6499999999999 448.4230000000001,545.6499999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="I18n" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,606.55 448.4230000000001,606.55" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Events" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,667.4499999999998 448.423,667.4499999999998" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Security" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,728.3499999999999 448.4230000000001,728.3499999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="Tasks" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,789.2499999999999 448.4230000000001,789.2499999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="FastAPI" data-to="CLI" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="388.423,454.2999999999999 418.423,454.2999999999999 418.423,850.1499999999999 448.4230000000001,850.1499999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Meta" data-to="FastAPI" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="228.668,484.7499999999999 248.668,484.7499999999999 248.668,454.2999999999999 268.668,454.2999999999999" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<g class="node" data-id="App" data-label="Application / base-fastApi" data-shape="rectangle">
+  <rect x="40" y="405.39999999999986" width="188.668" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="134.334" y="423.84999999999985" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">Application / base-fastApi</text>
+</g>
+<g class="node" data-id="FastAPI" data-label="apyra-fastapi" data-shape="rectangle">
+  <rect x="268.668" y="435.8499999999999" width="119.755" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="328.5455" y="454.2999999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-fastapi</text>
+</g>
+<g class="node" data-id="Core" data-label="apyra-core" data-shape="rectangle">
+  <rect x="448.4230000000001" y="40" width="109.381" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="503.1135000000001" y="58.45" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-core</text>
+</g>
+<g class="node" data-id="DB" data-label="apyra-db" data-shape="rectangle">
+  <rect x="448.4230000000001" y="100.89999999999999" width="96.04299999999999" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="496.4445000000001" y="119.35" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-db</text>
+</g>
+<g class="node" data-id="Auth" data-label="apyra-auth" data-shape="rectangle">
+  <rect x="448.4230000000001" y="161.79999999999998" width="106.41699999999999" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="501.63150000000013" y="180.25" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-auth</text>
+</g>
+<g class="node" data-id="Storage" data-label="apyra-storage" data-shape="rectangle">
+  <rect x="448.42300000000006" y="222.7" width="127.16499999999999" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="512.0055000000001" y="241.14999999999998" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-storage</text>
+</g>
+<g class="node" data-id="Cache" data-label="apyra-cache" data-shape="rectangle">
+  <rect x="448.4230000000001" y="283.59999999999997" width="118.273" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="507.5595000000001" y="302.04999999999995" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-cache</text>
+</g>
+<g class="node" data-id="AI" data-label="apyra-ai" data-shape="rectangle">
+  <rect x="448.4230000000001" y="344.49999999999994" width="91.59700000000001" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="494.2215000000001" y="362.94999999999993" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-ai</text>
+</g>
+<g class="node" data-id="Obs" data-label="apyra-observability" data-shape="rectangle">
+  <rect x="448.4230000000001" y="405.3999999999999" width="158.287" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="527.5665000000001" y="423.8499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-observability</text>
+</g>
+<g class="node" data-id="Email" data-label="apyra-email" data-shape="rectangle">
+  <rect x="448.4230000000001" y="466.2999999999999" width="110.863" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="503.85450000000014" y="484.7499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-email</text>
+</g>
+<g class="node" data-id="Channels" data-label="apyra-channels" data-shape="rectangle">
+  <rect x="448.4230000000001" y="527.1999999999998" width="136.05700000000002" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="516.4515000000001" y="545.6499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-channels</text>
+</g>
+<g class="node" data-id="I18n" data-label="apyra-i18n" data-shape="rectangle">
+  <rect x="448.4230000000001" y="588.0999999999999" width="101.971" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="499.4085000000001" y="606.55" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-i18n</text>
+</g>
+<g class="node" data-id="Events" data-label="apyra-events" data-shape="rectangle">
+  <rect x="448.423" y="648.9999999999998" width="121.23700000000001" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="509.0415" y="667.4499999999998" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-events</text>
+</g>
+<g class="node" data-id="Security" data-label="apyra-security" data-shape="rectangle">
+  <rect x="448.4230000000001" y="709.8999999999999" width="130.12900000000002" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="513.4875000000002" y="728.3499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-security</text>
+</g>
+<g class="node" data-id="Tasks" data-label="apyra-tasks" data-shape="rectangle">
+  <rect x="448.4230000000001" y="770.7999999999998" width="113.827" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="505.3365000000001" y="789.2499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-tasks</text>
+</g>
+<g class="node" data-id="CLI" data-label="apyra-cli" data-shape="rectangle">
+  <rect x="448.4230000000001" y="831.6999999999998" width="94.561" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="495.70350000000013" y="850.1499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra-cli</text>
+</g>
+<g class="node" data-id="Meta" data-label="apyra metapackage" data-shape="rectangle">
+  <rect x="70.38100000000003" y="466.2999999999999" width="158.28699999999998" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="149.52450000000002" y="484.7499999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">apyra metapackage</text>
+</g>
+</svg>

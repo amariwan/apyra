@@ -1,0 +1,17 @@
+flowchart LR
+    App[Application / base-fastApi] --> FastAPI[apyra-fastapi]
+    FastAPI --> Core[apyra-core]
+    FastAPI --> DB[apyra-db]
+    FastAPI --> Auth[apyra-auth]
+    FastAPI --> Storage[apyra-storage]
+    FastAPI --> Cache[apyra-cache]
+    FastAPI --> AI[apyra-ai]
+    FastAPI --> Obs[apyra-observability]
+    FastAPI --> Email[apyra-email]
+    FastAPI --> Channels[apyra-channels]
+    FastAPI --> I18n[apyra-i18n]
+    FastAPI --> Events[apyra-events]
+    FastAPI --> Security[apyra-security]
+    FastAPI --> Tasks[apyra-tasks]
+    FastAPI --> CLI[apyra-cli]
+    Meta[apyra metapackage] --> FastAPI

@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --python ${{ matrix.python-version }} --all-packages --all-extras
+      - run: uv run --python ${{ matrix.python-version }} ruff check .
+      - run: uv run --python ${{ matrix.python-version }} ruff format --check .
+      - run: uv run --python ${{ matrix.python-version }} mypy
+      - run: uv run --python ${{ matrix.python-version }} pyright
+      - run: uv run --python ${{ matrix.python-version }} pytest
+
+  build:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: |
+          for package in core fastapi storage db auth cache ai observability email channels i18n events security tasks cli; do
+            uv build --package "apyra-${package}"
+          done
+          uv build --package apyra
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/*
+
+  install:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - run: python -m venv /tmp/apyra-venv
+      - run: /tmp/apyra-venv/bin/pip install dist/*.whl
+      - run: /tmp/apyra-venv/bin/python -c "import apyra.core, apyra.fastapi, apyra.db, apyra.auth, apyra.storage, apyra.cache, apyra.ai, apyra.observability, apyra.email, apyra.channels, apyra.i18n, apyra.events, apyra.security, apyra.tasks, apyra.cli; print('imports ok')"
