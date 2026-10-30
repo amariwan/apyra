@@ -1,8 +1,10 @@
 # Apyra — Open-Source Growth Plan
 
-> Status: pre-launch (no public repository, no releases, no stars yet).
-> This document consolidates the audit, positioning, roadmap, and launch content
-> for Apyra. All technical claims are limited to what exists in the repository.
+> Status: public repository, early-stage release preparation. PyPI availability,
+> current stars, and releases must be verified before any launch announcement.
+> The numerical scores and audit below are a historical planning baseline, **not**
+> a continuously updated assessment. Apyra now has auth, DB, storage, cache, and
+> events examples, community files, and a corrected `just test-all` recipe.
 
 ## 1. Executive summary
 
@@ -14,8 +16,8 @@ pyright + pytest in CI across Python 3.12/3.13, a build/install smoke test, and
 release automation to PyPI.
 
 What is missing for adoption is **discoverability and onboarding**: a thin README,
-no community health files, no issue/PR templates, no published packages, no docs
-site, and no demos beyond a 20-line example. The biggest lever is making the first
+a missing published docs site, unclear package-publication status, and opportunities
+for clearer API references and example-driven tutorials. The biggest lever is making the first
 5 minutes compelling and verifiable.
 
 ## 2. Repository maturity assessment
@@ -28,10 +30,10 @@ site, and no demos beyond a 20-line example. The biggest lever is making the fir
 | CI | Good | quality + build + install jobs, matrix 3.12/3.13 |
 | Release | Manual | `workflow_dispatch`, PyPI trusted publishing |
 | Docs | Weak | README 69 lines, 1 architecture doc |
-| Examples | Minimal | one 20-line app |
+| Examples | Expanded | minimal, auth, database, storage, cache, and events demos |
 | Community files | Now added | CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, templates |
 | Published packages | None | v0.1.0, no PyPI release yet |
-| GitHub presence | None | no remote/commits yet (local only) |
+| GitHub presence | Public | https://github.com/amariwan/apyra |
 
 ## 3. Scores (0–100)
 
@@ -68,7 +70,7 @@ maintainer history). Improvements: label issues, enable Discussions, maintainer 
 4. Per-package READMEs with real usage. Effort: M.
 5. API reference (mkdocs or sphinx). Effort: L.
 6. Community files + templates. Effort: S. Done.
-7. Fix `just check` (currently collects 0 tests). Effort: S.
+7. Keep the complete `just check` quality gate working. Effort: S. Done.
 8. Enable GitHub Discussions + labels (good first issue, help wanted). Effort: S (manual).
 9. Add a docs site (mkdocs-material). Effort: L.
 10. Social preview image + repository description/topics. Effort: S (manual).
@@ -108,8 +110,8 @@ Topics: `python`, `fastapi`, `asyncio`, `pydantic`, `modular`, `framework`,
 ### Days 1–14: Foundation
 - Publish v0.1.0 to PyPI (core + fastapi first). Priority: P0, Impact: high, Effort: M.
 - Add pip-based quickstart. Priority: P1, Impact: medium, Effort: S.
-- Add 2 more runnable examples (auth+db). Priority: P1, Impact: high, Effort: M.
-- Fix `just check`. Priority: P2, Impact: low, Effort: S.
+- Validate and document the existing auth+DB examples. Priority: P1, Impact: high, Effort: M.
+- Keep `just check` aligned with CI. Priority: P2, Impact: low, Effort: S. Done.
 - Add demo GIF. Priority: P2, Impact: medium, Effort: M.
 
 ### Days 15–30: Initial distribution
@@ -136,7 +138,7 @@ Available from GitHub (after publishing): stars, forks, views, unique visitors,
 clones, contributors, issues, PRs. From PyPI: download counts. From docs site:
 page views (if added). Manual: community post engagement, feedback themes.
 
-Baseline: establish before launch (currently 0 stars, 0 downloads — pre-launch).
+Baseline: record actual public GitHub stars, traffic, and package downloads immediately before launch; do not assume zero.
 
 Hypotheses to test:
 - H1: A clear 5-minute quickstart increases star conversion from README views.
@@ -164,9 +166,9 @@ extracted it into modular packages. Here's the 5-min quickstart."
 |---|---|---|---|---|
 | 1 | README rewrite | P0 | S | Done |
 | 2 | Community files + templates | P0 | S | Done |
-| 3 | Fix `just check` (empty test-all) | P1 | S | Pending |
+| 3 | Fix `just check` (empty test-all) | P1 | S | Done |
 | 4 | Publish to PyPI | P0 | M | Pending (manual) |
-| 5 | More examples | P1 | M | Pending |
+| 5 | More examples | P1 | M | Auth/DB/storage/cache/events present; tasks pending |
 | 6 | Per-package READMEs | P1 | M | Pending |
 | 7 | API reference / docs site | P2 | L | Pending |
 | 8 | GitHub metadata + topics | P1 | S | Manual |
