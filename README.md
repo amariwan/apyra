@@ -177,7 +177,3 @@ MIT — see [`LICENSE`](LICENSE).
 
 If Apyra is useful to you, please consider giving the repository a ⭐. It helps others
 discover the project and motivates continued maintenance.
-
-## Star history
-
-[![Star History Chart](https://api.star-history.com/svg?repos=amariwan/apyra&type=Date)](https://star-history.com/#amariwan/apyra&Date)
