@@ -1,5 +1,11 @@
 # Apyra
 
+[![CI](https://github.com/amariwan/apyra/actions/workflows/ci.yml/badge.svg)](https://github.com/amariwan/apyra/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/amariwan/apyra?style=social)](https://github.com/amariwan/apyra/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/amariwan/apyra)](https://github.com/amariwan/apyra/commits/main)
+
 > Modular Python framework for building FastAPI applications with explicit, composable infrastructure.
 
 Apyra is a **uv-workspace monorepo** of 16 independently publishable Python packages under the
@@ -158,3 +164,7 @@ MIT — see [`LICENSE`](LICENSE).
 
 If Apyra is useful to you, please consider giving the repository a ⭐. It helps others
 discover the project and motivates continued maintenance.
+
+## Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=amariwan/apyra&type=Date)](https://star-history.com/#amariwan/apyra&Date)
