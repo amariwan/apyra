@@ -31,9 +31,13 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
       - name: Ruff lint
-        run: uv run --no-sync --python ${{ inputs.python-version }} ruff check .
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" ruff check .
       - name: Ruff format
-        run: uv run --no-sync --python ${{ inputs.python-version }} ruff format --check .
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" ruff format --check .
 
   typecheck:
     name: typecheck (${{ inputs.python-version }})
@@ -48,13 +52,19 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
       - name: mypy
-        run: uv run --no-sync --python ${{ inputs.python-version }} mypy
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" mypy
       - name: pyright
-        run: uv run --no-sync --python ${{ inputs.python-version }} pyright
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" pyright
       - name: pyright verifytypes
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
         run: |
           for package in ai auth cache channels cli core db email events fastapi i18n observability security storage tasks; do
-            uv run --no-sync --python ${{ inputs.python-version }} pyright --verifytypes "apyra.${package}" --ignoreexternal
+            uv run --no-sync --python "${PYTHON_VERSION}" pyright --verifytypes "apyra.${package}" --ignoreexternal
           done
 
   test:
@@ -117,6 +127,10 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
       - name: pip-audit
-        run: uv run --no-sync --python ${{ inputs.python-version }} pip-audit --skip-editable
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" pip-audit --skip-editable
       - name: bandit
-        run: uv run --no-sync --python ${{ inputs.python-version }} bandit -r packages -ll -q
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" bandit -r packages -ll -q

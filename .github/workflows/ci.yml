@@ -34,6 +34,7 @@ jobs:
         with:
           filters: |
             code:
+              - '.github/actions/**'
               - '.github/workflows/**'
               - 'packages/**'
               - 'tests/**'
@@ -51,9 +52,31 @@ jobs:
           CI_FORCE_FULL: ${{ github.event_name != 'pull_request' }}
         run: python3 scripts/select_ci_tests.py >> "$GITHUB_OUTPUT"
 
+  lock-check:
+    name: lock check
+    needs: changes
+    if: |
+      needs.changes.outputs.code == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Verify lockfile freshness
+        run: uv lock --check
+
   quality:
     name: quality (${{ matrix.python-version }})
-    needs: changes
+    needs: [changes, lock-check]
     if: |
       needs.changes.outputs.code == 'true' ||
       needs.changes.outputs.workflows == 'true' ||
@@ -116,7 +139,7 @@ jobs:
 
   build:
     name: build
-    needs: [changes, quality]
+    needs: [changes, quality, lock-check]
     if: |
       (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
@@ -124,8 +147,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -140,10 +161,6 @@ jobs:
             uv build --package "apyra-${package}"
           done
           uv build --package apyra
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
-        with:
-          subject-path: "dist/*"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: distributions
@@ -151,10 +168,79 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  attest-build:
+    name: attest build
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: distributions
+          path: dist
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: "dist/*"
+
+  required-checks:
+    name: required checks
+    needs: [changes, lock-check, quality, build, install-smoke, actionlint]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Verify mandatory jobs
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          LOCK_CHECK_RESULT: ${{ needs.lock-check.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          INSTALL_SMOKE_RESULT: ${{ needs.install-smoke.result }}
+          ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          for pair in \
+            "changes=${CHANGES_RESULT}" \
+            "lock-check=${LOCK_CHECK_RESULT}" \
+            "quality=${QUALITY_RESULT}" \
+            "build=${BUILD_RESULT}" \
+            "install-smoke=${INSTALL_SMOKE_RESULT}" \
+            "actionlint=${ACTIONLINT_RESULT}"; do
+            name="${pair%%=*}"
+            result="${pair#*=}"
+            echo "${name}: ${result}"
+            if [ "${result}" != "success" ] && [ "${result}" != "skipped" ]; then
+              failed=1
+            fi
+          done
+          # actionlint is allowed to be skipped only when no workflows changed
+          if [ "${ACTIONLINT_RESULT}" = "skipped" ]; then
+            echo "actionlint skipped (no workflow changes)"
+          fi
+          if [ "${failed}" -ne 0 ]; then
+            echo "One or more mandatory CI jobs did not succeed" >&2
+            exit 1
+          fi
+          echo "All mandatory CI jobs succeeded"
+
   install-smoke:
     name: install smoke
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

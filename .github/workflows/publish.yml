@@ -24,7 +24,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  lock-check:
+    if: github.repository == 'amariwan/apyra'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Verify lockfile freshness
+        run: uv lock --check
+
   quality:
+    needs: lock-check
     if: github.repository == 'amariwan/apyra'
     strategy:
       fail-fast: false
@@ -35,7 +53,7 @@ jobs:
       python-version: ${{ matrix.python-version }}
 
   build:
-    needs: quality
+    needs: [quality, lock-check]
     if: github.repository == 'amariwan/apyra'
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -157,6 +175,7 @@ jobs:
     timeout-minutes: 15
     environment: pypi-core
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -246,6 +265,7 @@ jobs:
     timeout-minutes: 15
     environment: ${{ format('pypi-{0}', matrix.package) }}
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -334,6 +354,7 @@ jobs:
     timeout-minutes: 15
     environment: pypi-fastapi
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -406,6 +427,7 @@ jobs:
     timeout-minutes: 15
     environment: pypi-meta
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -449,15 +471,7 @@ jobs:
         run: |
           version="${RELEASE_VERSION}"
           if [ -z "${version}" ]; then
-            if [ "${{ github.ref_type }}" = "tag" ]; then
-              version="${{ github.ref_name }}"
-              version="${version#v}"
-            else
-              version="${{ inputs.version }}"
-            fi
-          fi
-          if [ -z "${version}" ]; then
-            echo "Could not determine release version" >&2
+            echo "Release version is unavailable; build output is required" >&2
             exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"

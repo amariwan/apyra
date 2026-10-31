@@ -17,4 +17,6 @@ runs:
 
     - name: Sync workspace
       shell: bash
-      run: uv sync --frozen --python ${{ inputs.python-version }} --all-packages --all-extras
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
+      run: uv sync --frozen --python "${PYTHON_VERSION}" --all-packages --all-extras

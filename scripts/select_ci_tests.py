@@ -22,12 +22,15 @@ def _internal_dependents() -> dict[str, set[str]]:
         project_name = project["name"]
         package_dir = manifest.parent.name
         package_dirs[project_name] = package_dir
-        projects.append((package_dir, project.get("dependencies", [])))
+        dependencies = list(project.get("dependencies", []))
+        for optional in project.get("optional-dependencies", {}).values():
+            dependencies.extend(optional)
+        projects.append((package_dir, dependencies))
 
     dependents = {package_dir: set() for package_dir, _ in projects}
     for package_dir, dependencies in projects:
         for dependency in dependencies:
-            dependency_name = re.split(r"[<>=!~;\s]", dependency, maxsplit=1)[0]
+            dependency_name = re.split(r"[\[<>=!~;\s]", dependency, maxsplit=1)[0]
             dependency_dir = package_dirs.get(dependency_name)
             if dependency_dir is not None:
                 dependents[dependency_dir].add(package_dir)
