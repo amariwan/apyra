@@ -439,6 +439,15 @@ jobs:
             exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+      - name: Install apyra-fastapi from PyPI
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          version="${RELEASE_VERSION}"
+          uv venv /tmp/apyra-fastapi-smoke
+          uv pip install --python /tmp/apyra-fastapi-smoke/bin/python "apyra-fastapi==${version}"
+          /tmp/apyra-fastapi-smoke/bin/python -c "import apyra.fastapi; print('apyra.fastapi import ok')"
+
       - name: Install from PyPI and run smoke test
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
