@@ -34,6 +34,7 @@ class MemoryTTLCache[K, V]:
         self._lock = RLock()
 
     def get(self, key: K) -> V | None:
+        """Return a live value and refresh its LRU position, or return a miss."""
         if not self._enabled:
             return None
 
@@ -48,6 +49,7 @@ class MemoryTTLCache[K, V]:
             return entry.value
 
     def set(self, key: K, value: V, *, ttl_seconds: int | None = None) -> V:
+        """Store a value with its TTL and evict least-recently-used entries."""
         if not self._enabled:
             return value
 
@@ -60,16 +62,27 @@ class MemoryTTLCache[K, V]:
         return value
 
     def get_or_set(self, key: K, factory: Callable[[], V]) -> V:
-        cached = self.get(key)
-        if cached is not None:
-            return cached
+        """Return a live value or create and cache one with the default TTL."""
+        if not self._enabled:
+            return factory()
+
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is not None:
+                if entry.expires_at <= self._time_fn():
+                    self._entries.pop(key, None)
+                else:
+                    self._entries.move_to_end(key)
+                    return entry.value
         return self.set(key, factory())
 
     def invalidate(self, key: K) -> None:
+        """Remove one key without raising when it is absent."""
         with self._lock:
             self._entries.pop(key, None)
 
     def clear(self) -> None:
+        """Remove all cache entries."""
         with self._lock:
             self._entries.clear()
 

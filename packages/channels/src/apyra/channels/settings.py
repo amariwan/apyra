@@ -4,24 +4,29 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import ClassVar
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ChannelBackend(StrEnum):
+    """Supported channel-layer implementations."""
+
     MEMORY = "memory"
     REDIS = "redis"
 
 
 class ChannelSettings(BaseSettings):
-    model_config = SettingsConfigDict(
+    """Configuration for optional in-process or Redis channel layers."""
+
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_file=(".env", ".env.dev"), case_sensitive=False, extra="ignore"
     )
 
     CHANNELS_ENABLED: bool = False
     CHANNELS_BACKEND: ChannelBackend = ChannelBackend.MEMORY
-    CHANNELS_REDIS_URL: str | None = None
+    CHANNELS_REDIS_URL: str | None = Field(default=None, repr=False)
     CHANNELS_PREFIX: str = "app:channels"
     CHANNELS_QUEUE_SIZE: int = Field(default=100, ge=1)
 

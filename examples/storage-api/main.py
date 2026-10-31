@@ -2,9 +2,13 @@
 
 Demonstrates upload/download/delete via the storage contract.
 
+This is a local development example. Production routes must add authentication,
+authorization, storage quotas and deployment-specific request limits.
+
 Run with::
 
-    uv run uvicorn main:app --app-dir examples/storage-api --reload
+    uv run --project examples/storage-api uvicorn main:app \
+      --app-dir examples/storage-api --reload
 """
 
 from __future__ import annotations
@@ -13,12 +17,13 @@ from typing import Annotated
 
 from apyra.core import Settings
 from apyra.fastapi import create_app
-from apyra.storage import StorageClient, get_storage_client
+from apyra.storage import StorageClient, StorageFileNotFoundError, get_storage_client
 from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 api = APIRouter()
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 def get_storage() -> StorageClient:
@@ -35,7 +40,9 @@ class UploadResult(BaseModel):
 async def upload(
     path: str, file: UploadFile, storage: Annotated[StorageClient, Depends(get_storage)]
 ) -> UploadResult:
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="upload_too_large")
     meta = storage.upload_file(
         data, path, content_type=file.content_type or "application/octet-stream"
     )
@@ -46,8 +53,8 @@ async def upload(
 async def download(path: str, storage: Annotated[StorageClient, Depends(get_storage)]) -> dict:
     try:
         data = storage.download_file(path)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except StorageFileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="file_not_found") from exc
     return {"path": path, "size_bytes": len(data)}
 
 

@@ -2,7 +2,10 @@
 name = "apyra-minimal-api-example"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = ["apyra-fastapi>=0.1.0,<0.2.0"]
+dependencies = [
+    "apyra-fastapi>=0.1.0,<0.2.0",
+    "uvicorn>=0.30.0",
+]
 
 [tool.uv.sources]
 apyra-fastapi = { path = "../../packages/fastapi", editable = true }

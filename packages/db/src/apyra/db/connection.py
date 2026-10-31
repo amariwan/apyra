@@ -46,8 +46,10 @@ def _build_database_url(*, asynchronous: bool, db_settings: DbSettings | None = 
 
 
 def build_async_database_url(db_settings: DbSettings | None = None) -> str:
+    """Build an async SQLAlchemy URL from settings or the environment."""
     return _build_database_url(asynchronous=True, db_settings=db_settings)
 
 
 def build_sync_database_url(db_settings: DbSettings | None = None) -> str:
+    """Build a synchronous SQLAlchemy URL from settings or the environment."""
     return _build_database_url(asynchronous=False, db_settings=db_settings)

@@ -26,7 +26,7 @@ for clearer API references and example-driven tutorials. The biggest lever is ma
 |---|---|---|
 | Source code | Mature-ish | 16 packages, async-first, typed |
 | Tests | Present | 69 tests, pytest-asyncio auto |
-| Lint/Typecheck | Strong | ruff, mypy (strict), pyright |
+| Lint/Typecheck | Strong | ruff, strict mypy on configured packages, pyright (basic mode) |
 | CI | Good | quality + build + install jobs, matrix 3.12/3.13 |
 | Release | Manual | `workflow_dispatch`, PyPI trusted publishing |
 | Docs | Weak | README 69 lines, 1 architecture doc |

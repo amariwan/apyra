@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import StrEnum
 from functools import lru_cache
-from typing import cast
+from typing import ClassVar, cast
 
 from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,7 +21,7 @@ class StorageBackend(StrEnum):
 class StorageSettings(BaseSettings):
     """S3-compatible storage configuration."""
 
-    model_config = SettingsConfigDict(
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_file=(".env", ".env.local"),
         case_sensitive=False,
         extra="ignore",
@@ -30,7 +30,7 @@ class StorageSettings(BaseSettings):
     storage_enabled: bool = True
     storage_backend: StorageBackend = StorageBackend.FILESYSTEM
 
-    s3_endpoint: str | None = None
+    s3_endpoint: str | None = Field(default=None, repr=False)
     s3_access_key_id: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("accessKey", "S3_ACCESS_KEY_ID", "s3_access_key_id"),

@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class DbSettings(BaseSettings):
+    """Database connection and pool settings loaded from environment files."""
+
     db_enabled: bool = Field(default=False, validation_alias="DB_ENABLED")
     db_backend: Literal["postgresql", "mysql", "sqlite"] = Field(
         default="postgresql", validation_alias="DB_BACKEND"
     )
-    db_port: int | None = Field(default=None, validation_alias="DB_PORT")
+    db_port: int | None = Field(default=None, validation_alias="DB_PORT", ge=1, le=65535)
     db_username: str | None = Field(default=None, validation_alias="DB_USERNAME")
-    db_password: str | None = Field(default=None, validation_alias="DB_PASSWORD")
+    db_password: str | None = Field(default=None, validation_alias="DB_PASSWORD", repr=False)
     db_database: str | None = Field(default=None, validation_alias="DB_DATABASE")
     db_ip: str = Field(default="localhost", validation_alias="DB_IP")
     db_engine_echo: bool = Field(default=False, validation_alias="DB_ENGINE_ECHO")
@@ -26,7 +28,7 @@ class DbSettings(BaseSettings):
     db_pool_pre_ping: bool = Field(default=True, validation_alias="DB_POOL_PRE_PING")
     db_auto_create_tables: bool = Field(default=False, validation_alias="DB_AUTO_CREATE_TABLES")
 
-    model_config = SettingsConfigDict(
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_file=(".env", ".env.local"),
         case_sensitive=False,
         extra="ignore",

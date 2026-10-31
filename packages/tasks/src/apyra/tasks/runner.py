@@ -8,13 +8,17 @@ from .tasks import Task, TaskResult
 
 
 class TaskRunner:
+    """Register named async tasks and execute them with retries and timeouts."""
+
     def __init__(self) -> None:
         self._tasks: dict[str, Task] = {}
 
     def register(self, task: Task) -> None:
+        """Register or replace a task under its name."""
         self._tasks[task.name] = task
 
     async def run(self, name: str) -> TaskResult:
+        """Run a registered task until success or attempts are exhausted."""
         task = self._tasks[name]
         attempts = 0
         last_error: str | None = None

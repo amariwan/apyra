@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,7 +22,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_allowed_origins: list[str] = Field(default_factory=list)
 
-    model_config = SettingsConfigDict(
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_file=(".env", ".env.local"),
         env_prefix="APYRA_",
         case_sensitive=False,
@@ -28,6 +30,7 @@ class Settings(BaseSettings):
     )
 
     def normalized_api_prefix(self) -> str:
+        """Return the API prefix with one leading slash and no trailing slash."""
         prefix = self.api_prefix.strip()
         if not prefix:
             return ""

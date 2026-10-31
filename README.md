@@ -30,7 +30,8 @@ FastAPI already provides routing, dependency injection, and OpenAPI. Apyra is **
   globals or magic.
 - **Independently publishable.** Every package ships its own wheel; pin and upgrade them
   separately.
-- **Type-safe.** Strict mypy + pyright across the workspace.
+- **Typed distributions.** Inline PEP 561 types ship with each code package; mypy and Pyright
+  run in CI across the configured package sets.
 - **Production-oriented.** Async database repositories, JWT/OAuth2/RBAC, storage contracts,
   cache decorators, observability primitives, typed events, and background task adapters.
 
@@ -57,7 +58,7 @@ FastAPI already provides routing, dependency injection, and OpenAPI. Apyra is **
 
 ## Quick start (5 minutes)
 
-### 1. Install
+PyPI packages are not published yet. Try the bundled example from the source checkout:
 
 ```bash
 # With uv (recommended)
@@ -132,12 +133,12 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pyr
 > The `just check` recipe runs lint, mypy, pyright, and the normal pytest suite.
 > The marker-filtered `just test-unit` and `just test-integration` recipes are not
 > equivalent to the full suite until all tests have appropriate markers.
-
 ## Architecture
 
 Apyra is a standalone monorepo with independently publishable distributions.
 
-- `apyra` (metapackage) → `apyra-fastapi` → `apyra-core`
+- `apyra` (metapackage) → `apyra-core`; the optional `web` extra adds
+  `apyra-fastapi` (which also depends on `apyra-auth`).
 - Optional infrastructure packages depend only on what they need.
 - `apyra-core` never depends on FastAPI or any optional infrastructure.
 - PEP 420 implicit namespace packages: no `apyra/__init__.py` anywhere; each concrete

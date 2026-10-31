@@ -40,9 +40,25 @@ async def test_memcached_cache_round_trip() -> None:
     assert await cache.get("key") is None
 
     await cache.set("key", "value")
+    with pytest.raises(RuntimeError, match="server-wide Memcached flush is disabled"):
+        await cache.clear()
+    assert not client.flushed
+
+    cache = MemcachedCache(client, key_prefix="app", allow_server_flush=True)
     await cache.clear()
     assert client.flushed
     assert await cache.get("key") is None
 
     await cache.close()
     assert client.closed
+
+
+@pytest.mark.asyncio
+async def test_memcached_server_flush_is_disabled_by_default() -> None:
+    client = FakeMemcachedClient()
+    cache = MemcachedCache(client)
+
+    with pytest.raises(RuntimeError, match="server-wide Memcached flush is disabled"):
+        await cache.clear()
+
+    assert not client.flushed

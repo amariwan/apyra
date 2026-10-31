@@ -10,15 +10,27 @@ JSONValue = Any
 
 
 class AsyncCache(Protocol):
-    async def get(self, key: str) -> JSONValue | None: ...
+    """Async key-value cache contract with optional expiration."""
 
-    async def set(self, key: str, value: JSONValue, *, ttl_seconds: int | None = None) -> None: ...
+    async def get(self, key: str) -> JSONValue | None:
+        """Return a cached value or ``None`` when the key is absent."""
+        ...
 
-    async def delete(self, key: str) -> None: ...
+    async def set(self, key: str, value: JSONValue, *, ttl_seconds: int | None = None) -> None:
+        """Store a value, optionally overriding the backend's default TTL."""
+        ...
 
-    async def clear(self) -> None: ...
+    async def delete(self, key: str) -> None:
+        """Remove one key if it exists."""
+        ...
 
-    async def close(self) -> None: ...
+    async def clear(self) -> None:
+        """Remove cached entries according to the backend's clear semantics."""
+        ...
+
+    async def close(self) -> None:
+        """Release backend resources held by this cache."""
+        ...
 
 
 class MemoryAsyncCache:
@@ -31,19 +43,24 @@ class MemoryAsyncCache:
         )
 
     async def get(self, key: str) -> JSONValue | None:
+        """Return a value from the process-local TTL cache."""
         return self._default_cache.get(key)
 
     async def set(self, key: str, value: JSONValue, *, ttl_seconds: int | None = None) -> None:
+        """Store a value using the supplied TTL or configured default."""
         ttl = self._default_ttl if ttl_seconds is None else ttl_seconds
         self._default_cache.set(key, value, ttl_seconds=ttl)
 
     async def delete(self, key: str) -> None:
+        """Remove one key from the process-local cache."""
         self._default_cache.invalidate(key)
 
     async def clear(self) -> None:
+        """Remove every entry from the process-local cache."""
         self._default_cache.clear()
 
     async def close(self) -> None:
+        """Clear entries; no external resource is held by this backend."""
         await self.clear()
 
 

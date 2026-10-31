@@ -3,9 +3,18 @@
 Demonstrates HS256 JWT issuance via ``TokenService`` and FastAPI auth
 dependencies (``require_scopes`` / ``require_roles``).
 
+This is a local development example: the login handler accepts any non-empty
+credentials. Configure a random signing key before running it; the example refuses
+to start if ``APYRA_EXAMPLE_JWT_SECRET`` is missing or shorter than 32 UTF-8 bytes.
+Do not expose this demonstration login flow as production authentication.
+
 Run with::
 
-    uv run uvicorn main:app --app-dir examples/authenticated-api --reload
+    export APYRA_EXAMPLE_JWT_SECRET="$(
+      uv run python -c 'import secrets; print(secrets.token_hex(32))'
+    )"
+    uv run --project examples/authenticated-api uvicorn main:app \
+      --app-dir examples/authenticated-api --reload
 
 Try it::
 
@@ -16,6 +25,7 @@ Try it::
 
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
 from apyra.auth import AuthSettings, JWTAuthenticator, TokenService
@@ -25,12 +35,19 @@ from pydantic import BaseModel, SecretStr
 
 from fastapi import APIRouter, Depends, HTTPException
 
-SECRET = "change-me-in-production-use-a-32-byte-secret-at-least"  # noqa: S105
+SECRET = os.environ.get("APYRA_EXAMPLE_JWT_SECRET")
+if SECRET is None or len(SECRET.encode("utf-8")) < 32:
+    raise RuntimeError(
+        "APYRA_EXAMPLE_JWT_SECRET must be set to a random value of at least 32 UTF-8 bytes"
+    )
 
 auth_settings = AuthSettings(
     mode="hs",
     hs_secret=SecretStr(SECRET),
     algorithms=["HS256"],
+    issuer="apyra-example",
+    audience="apyra-example-api",
+    expected_access_token_type="access",  # noqa: S106
 )
 token_service = TokenService(auth_settings)
 authenticator = JWTAuthenticator(auth_settings, revocation_store=token_service.store)

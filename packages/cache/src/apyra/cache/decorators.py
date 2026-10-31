@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import functools
+import hashlib
 import inspect
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from .factory import get_cache
 
-T = TypeVar("T")
 _F = TypeVar("_F", bound=Callable[..., Awaitable[Any]])
 
 
@@ -18,13 +18,17 @@ def _make_key(
     key: str | Callable[..., str] | None,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
+    signature: inspect.Signature,
 ) -> str:
     if callable(key):
         value = key(*args, **kwargs)
     elif isinstance(key, str):
         value = key
     else:
-        value = f"{func.__qualname__}:{args!r}:{sorted(kwargs.items())!r}"
+        bound = signature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        arguments_hash = hashlib.sha256(repr(bound.arguments).encode("utf-8")).hexdigest()
+        value = f"{func.__module__}.{func.__qualname__}:{arguments_hash}"
     return str(value)
 
 
@@ -37,20 +41,25 @@ def cached(
 
     The cached value is wrapped internally so that ``None`` results are
     distinguishable from cache misses. Values must be compatible with the
-    selected cache backend (JSON-compatible for Redis/Memcached).
+    selected cache backend (JSON-compatible for Redis/Memcached). The default
+    key hashes argument representations, but is not a keyed digest; do not use
+    it for functions that accept passwords or other low-entropy secrets.
     """
 
     def decorator(func: _F) -> _F:
         if not inspect.iscoroutinefunction(func):
             raise TypeError(f"@cached requires an async function, got {func!r}")
+        signature = inspect.signature(func)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             cache = get_cache()
-            cache_key = _make_key(func, key, args, kwargs)
+            cache_key = _make_key(func, key, args, kwargs, signature)
             cached_payload = await cache.get(cache_key)
-            if isinstance(cached_payload, dict) and cached_payload.get("__apyra_cached__") is True:
-                return cached_payload.get("value")
+            if isinstance(cached_payload, dict):
+                payload = cast(dict[str, Any], cached_payload)
+                if payload.get("__apyra_cached__") is True and "value" in payload:
+                    return payload["value"]
             result = await func(*args, **kwargs)
             await cache.set(
                 cache_key,

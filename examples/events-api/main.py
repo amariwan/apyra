@@ -2,9 +2,13 @@
 
 Demonstrates publishing and subscribing to typed events with the in-memory bus.
 
+Development example only: its routes have no authentication or authorization.
+Add route-level access controls before exposing it to untrusted clients.
+
 Run with::
 
-    uv run uvicorn main:app --app-dir examples/events-api --reload
+    uv run --project examples/events-api uvicorn main:app \
+      --app-dir examples/events-api --reload
 """
 
 from __future__ import annotations

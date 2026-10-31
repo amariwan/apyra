@@ -27,17 +27,13 @@ class DatabaseSessionManager:
     def __init__(self, host: str, engine_kwargs: dict[str, object] | None = None) -> None:
         self._host = host
         self._engine_kwargs = dict(engine_kwargs or {})
-        engine: AsyncEngine = create_async_engine(host, **self._engine_kwargs)
-        sessionmaker: async_sessionmaker[AsyncSession] = async_sessionmaker(
-            autocommit=False,
-            bind=engine,
-            expire_on_commit=False,
-        )
+        engine, sessionmaker = self._new_engine()
         self._engine: AsyncEngine | None = engine
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = sessionmaker
         self._bound_loop: AbstractEventLoop | None = None
 
     async def close(self) -> None:
+        """Dispose the engine; later use creates a fresh engine lazily."""
         if self._engine is not None:
             await self._engine.dispose()
             self._engine = None
@@ -50,6 +46,7 @@ class DatabaseSessionManager:
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncGenerator[AsyncConnection]:
+        """Yield a transactional connection, rolling back if its body fails."""
         await self._ensure_current_loop()
         if self._engine is None:
             raise RuntimeError("database session manager is not initialized")
@@ -62,6 +59,7 @@ class DatabaseSessionManager:
 
     @contextlib.asynccontextmanager
     async def session(self) -> AsyncGenerator[AsyncSession]:
+        """Yield a session, rolling back on failure and always closing it."""
         await self._ensure_current_loop()
         if self._sessionmaker is None:
             raise RuntimeError("database session manager is not initialized")
@@ -79,16 +77,22 @@ class DatabaseSessionManager:
         if self._bound_loop is current_loop:
             return
         if self._engine is None:
-            raise RuntimeError("database session manager is not initialized")
-        if self._bound_loop is not None:
-            await self._engine.dispose(close=False)
-            self._engine = create_async_engine(self._host, **self._engine_kwargs)
-            self._sessionmaker = async_sessionmaker(
-                autocommit=False,
-                bind=self._engine,
-                expire_on_commit=False,
-            )
+            self._engine, self._sessionmaker = self._new_engine()
+        elif self._bound_loop is not None:
+            await self._engine.dispose()
+            self._engine, self._sessionmaker = self._new_engine()
         self._bound_loop = current_loop
+
+    def _new_engine(
+        self,
+    ) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+        engine = create_async_engine(self._host, **self._engine_kwargs)
+        sessionmaker = async_sessionmaker(
+            autocommit=False,
+            bind=engine,
+            expire_on_commit=False,
+        )
+        return engine, sessionmaker
 
 
 @functools.cache
@@ -109,6 +113,7 @@ def get_sessionmanager() -> DatabaseSessionManager:
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession]:
+    """Yield a managed async session for dependency injection."""
     async with get_sessionmanager().session() as session:
         yield session
 
@@ -120,6 +125,7 @@ def _db_setting(settings: object, name: str) -> object:
 
 
 async def ensure_db_schema() -> None:
+    """Create mapped tables when database auto-creation is enabled."""
     settings = get_db_settings()
     enabled = _db_setting(settings, "enabled")
     if enabled is None:

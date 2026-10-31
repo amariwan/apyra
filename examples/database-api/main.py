@@ -3,9 +3,13 @@
 Demonstrates async SQLAlchemy sessions, the generic ``Repository``, and
 auto-creation of tables on startup.
 
+Development example only: its routes have no authentication or authorization.
+Add route-level access controls before exposing it to untrusted clients.
+
 Run with::
 
-    uv run uvicorn main:app --app-dir examples/database-api --reload
+    uv run --project examples/database-api uvicorn main:app \
+      --app-dir examples/database-api --reload
 """
 
 from __future__ import annotations

@@ -10,7 +10,7 @@ from .base import FileMetadata, StorageClient, normalize_storage_path
 from .exceptions import StorageConfigError, StorageError, StorageFileNotFoundError
 from .settings import StorageSettings
 
-logger = logging.getLogger("apyra.storage")
+logger: logging.Logger = logging.getLogger("apyra.storage")
 
 
 class FilesystemStorageClient(StorageClient):
@@ -59,12 +59,12 @@ class FilesystemStorageClient(StorageClient):
         content_type: str = "application/octet-stream",
         metadata: dict[str, str] | None = None,
     ) -> FileMetadata:
+        """Write bytes below the configured root and return their metadata."""
         file_path = self._resolve_path(path)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
         try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_bytes(file_bytes)
-        except (OSError, PermissionError) as err:
+        except OSError as err:
             raise StorageError(f"could not write file: {err}") from err
 
         return FileMetadata(
@@ -72,6 +72,7 @@ class FilesystemStorageClient(StorageClient):
         )
 
     def download_file(self, path: str) -> bytes:
+        """Read a stored file, raising ``StorageFileNotFoundError`` when absent."""
         file_path = self._resolve_path(path)
 
         if not file_path.exists():
@@ -83,10 +84,12 @@ class FilesystemStorageClient(StorageClient):
             raise StorageError(f"could not read file: {err}") from err
 
     def file_exists(self, path: str) -> bool:
+        """Return whether the normalized path names a regular stored file."""
         file_path = self._resolve_path(path)
         return file_path.exists() and file_path.is_file() and not file_path.is_symlink()
 
     def delete_file(self, path: str) -> None:
+        """Delete a stored file; deleting an absent path is a no-op."""
         file_path = self._resolve_path(path)
 
         if not file_path.exists():
@@ -98,14 +101,19 @@ class FilesystemStorageClient(StorageClient):
             raise StorageError(f"could not delete file: {err}") from err
 
     def file_size(self, path: str) -> int:
+        """Return the file size in bytes, raising when the path is absent."""
         file_path = self._resolve_path(path)
 
         if not file_path.exists():
             raise StorageFileNotFoundError(f"File not found: '{normalize_storage_path(path)}'")
 
-        return file_path.stat().st_size
+        try:
+            return file_path.stat().st_size
+        except OSError as err:
+            raise StorageError(f"could not read file size: {err}") from err
 
     def list_files(self, prefix: str = "") -> list[str]:
+        """List sorted file keys below the optional root-relative path prefix."""
         if prefix:
             search_root = self._resolve_path(prefix)
         else:
@@ -123,4 +131,5 @@ class FilesystemStorageClient(StorageClient):
         return sorted(keys)
 
     def generate_presigned_url(self, path: str, *, expires_in: int = 3600) -> str:
+        """Raise ``StorageError`` because local files have no presigned URL support."""
         raise StorageError("presigned URLs are not supported by the filesystem backend")

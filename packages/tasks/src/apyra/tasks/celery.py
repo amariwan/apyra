@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from importlib import import_module
 from typing import Any
 
 F = Callable[..., Any]
@@ -32,12 +33,14 @@ class CeleryAdapter:
         if self._app is not None:
             return self._app
         try:
-            from celery import Celery
-        except ImportError as exc:
+            celery = import_module("celery")
+        except ModuleNotFoundError as exc:
+            if exc.name != "celery":
+                raise
             raise CeleryUnavailableError(
                 "Celery is not installed; install apyra-tasks[celery]"
             ) from exc
-        self._app = Celery("apyra", broker=self._broker_url)
+        self._app = celery.Celery("apyra", broker=self._broker_url)
         return self._app
 
     def task(
@@ -47,6 +50,7 @@ class CeleryAdapter:
         retries: int | None = None,
         timeout: float | None = None,
     ) -> Any:
+        """Decorate a callable with Celery retry and soft/hard timeout options."""
         app = self._resolve_app()
         resolved_retries = self._default_retries if retries is None else retries
         resolved_timeout = self._default_timeout if timeout is None else timeout
@@ -62,4 +66,5 @@ class CeleryAdapter:
         return decorator
 
     def send(self, task: Any, *args: Any, **kwargs: Any) -> Any:
+        """Enqueue a decorated task through Celery's ``delay`` interface."""
         return task.delay(*args, **kwargs)

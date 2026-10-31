@@ -8,7 +8,7 @@ license = "MIT"
 authors = [{ name = "amariwan" }]
 dependencies = [
     "apyra-core>=0.1.0,<0.2.0",
-    "pyjwt[crypto]>=2.8.0",
+    "pyjwt[crypto]>=2.15.1",
     "pydantic>=2.8.0",
     "pydantic-settings>=2.4.0",
 ]
@@ -35,5 +35,6 @@ src = ["src", "tests"]
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]

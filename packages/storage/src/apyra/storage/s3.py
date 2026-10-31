@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from typing import Any, cast
+from urllib.parse import urlsplit
 
 from .base import FileMetadata, StorageClient, normalize_storage_path
 from .exceptions import StorageConfigError, StorageError, StorageFileNotFoundError
 from .settings import StorageSettings
 
-logger = logging.getLogger("apyra.storage")
+logger: logging.Logger = logging.getLogger("apyra.storage")
 
 
 class S3StorageClient(StorageClient):
@@ -23,15 +24,19 @@ class S3StorageClient(StorageClient):
             raise StorageConfigError("s3 bucket is required")
 
         try:
-            import boto3  # pyright: ignore[reportMissingImports]
-            from botocore.config import Config  # pyright: ignore[reportMissingImports]
-            from botocore.exceptions import ClientError  # pyright: ignore[reportMissingImports]
-        except ImportError as exc:
+            import boto3  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
+            from botocore.config import Config  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
+            from botocore.exceptions import ClientError  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
+        except ModuleNotFoundError as exc:
+            if exc.name not in {"boto3", "botocore"}:
+                raise
             raise StorageConfigError("boto3 is required for the S3 backend") from exc
 
         endpoint_url = settings.s3_endpoint or None
-        if endpoint_url and not settings.s3_secure and endpoint_url.startswith("https://"):
-            endpoint_url = endpoint_url.replace("https://", "http://", 1)
+        if endpoint_url:
+            scheme = urlsplit(endpoint_url).scheme.lower()
+            if settings.s3_secure and scheme != "https":
+                raise StorageConfigError("secure S3 endpoints must use HTTPS")
 
         access_key = (
             settings.s3_access_key_id.get_secret_value().strip()
@@ -82,10 +87,10 @@ class S3StorageClient(StorageClient):
         response = getattr(exc, "response", None)
         if not isinstance(response, dict):
             return False
-        error_obj = response.get("Error") or {}
+        error_obj: object = cast(dict[str, object], response).get("Error") or {}
         if not isinstance(error_obj, dict):
             return False
-        code = error_obj.get("Code")
+        code = cast(dict[str, object], error_obj).get("Code")
         return str(code) in {"404", "NoSuchKey", "NotFound"}
 
     def upload_file(
@@ -96,6 +101,7 @@ class S3StorageClient(StorageClient):
         content_type: str = "application/octet-stream",
         metadata: dict[str, str] | None = None,
     ) -> FileMetadata:
+        """Upload bytes to the configured bucket and return local key metadata."""
         normalized = normalize_storage_path(path)
         object_key = self._object_key(normalized)
 
@@ -116,6 +122,7 @@ class S3StorageClient(StorageClient):
         return FileMetadata(path=normalized, size_bytes=len(file_bytes), content_type=content_type)
 
     def download_file(self, path: str) -> bytes:
+        """Download an object, raising ``StorageFileNotFoundError`` when absent."""
         normalized = normalize_storage_path(path)
         object_key = self._object_key(normalized)
 
@@ -128,6 +135,7 @@ class S3StorageClient(StorageClient):
             raise StorageError(f"s3 download failed: {exc}") from exc
 
     def file_exists(self, path: str) -> bool:
+        """Return whether the configured bucket contains the normalized object key."""
         normalized = normalize_storage_path(path)
         object_key = self._object_key(normalized)
 
@@ -140,6 +148,7 @@ class S3StorageClient(StorageClient):
             raise StorageError(f"s3 exists check failed: {exc}") from exc
 
     def delete_file(self, path: str) -> None:
+        """Delete the normalized object key from the configured bucket."""
         normalized = normalize_storage_path(path)
         object_key = self._object_key(normalized)
 
@@ -149,6 +158,7 @@ class S3StorageClient(StorageClient):
             raise StorageError(f"s3 delete failed: {exc}") from exc
 
     def file_size(self, path: str) -> int:
+        """Return object size in bytes, raising ``StorageFileNotFoundError`` if absent."""
         normalized = normalize_storage_path(path)
         object_key = self._object_key(normalized)
 
@@ -162,6 +172,7 @@ class S3StorageClient(StorageClient):
         return int(meta.get("ContentLength") or 0)
 
     def list_files(self, prefix: str = "") -> list[str]:
+        """List sorted keys in this client's configured prefix and optional sub-prefix."""
         if prefix:
             normalized_prefix = normalize_storage_path(prefix)
             object_prefix = self._object_key(normalized_prefix)
@@ -180,7 +191,9 @@ class S3StorageClient(StorageClient):
             for page in paginator.paginate(Bucket=self._bucket, Prefix=object_prefix):
                 for item in page.get("Contents", []):
                     object_key = str(item.get("Key") or "")
-                    if not object_key:
+                    if not object_key or (
+                        object_prefix and not object_key.startswith(object_prefix)
+                    ):
                         continue
                     keys.append(self._to_public_key(object_key))
         except Exception as exc:
@@ -189,6 +202,9 @@ class S3StorageClient(StorageClient):
         return sorted(keys)
 
     def generate_presigned_url(self, path: str, *, expires_in: int = 3600) -> str:
+        """Generate a temporary GET URL whose lifetime is ``expires_in`` seconds."""
+        if type(expires_in) is not int or expires_in < 1:
+            raise ValueError("expires_in must be a positive integer")
         normalized = normalize_storage_path(path)
         object_key = self._object_key(normalized)
 

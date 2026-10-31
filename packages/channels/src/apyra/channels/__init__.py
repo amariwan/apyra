@@ -17,8 +17,9 @@ try:
     from .websocket import WebSocketChannel as _WebSocketChannel
 
     WebSocketChannel = _WebSocketChannel
-except ImportError:  # pragma: no cover - FastAPI is an optional integration dependency
-    pass
+except ModuleNotFoundError as _error:  # pragma: no cover - optional FastAPI integration
+    if _error.name != "fastapi":
+        raise
 
 __all__ = [
     "ChannelBackend",
