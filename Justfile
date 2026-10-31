@@ -66,6 +66,8 @@ mypy:
 pyright:
     uv run pyright
 
+typecheck: mypy pyright
+
 check: lint mypy pyright test
 
 # ----------------------------------------------------------------------

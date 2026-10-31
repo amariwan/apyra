@@ -4,38 +4,91 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
-  quality:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13"]
+  changes:
+    name: detect changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      test-paths: ${{ steps.select-tests.outputs.test-paths }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+      - id: filter
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         with:
-          enable-cache: true
-      - run: uv python install ${{ matrix.python-version }}
-      - run: uv sync --python ${{ matrix.python-version }} --all-packages --all-extras
-      - run: uv run --python ${{ matrix.python-version }} ruff check .
-      - run: uv run --python ${{ matrix.python-version }} ruff format --check .
-      - run: uv run --python ${{ matrix.python-version }} mypy
-      - run: uv run --python ${{ matrix.python-version }} pyright
-      - run: |
-          for package in ai auth cache channels cli core db email events fastapi i18n observability security storage tasks; do
-            uv run --python ${{ matrix.python-version }} pyright --verifytypes "apyra.${package}" --ignoreexternal
-          done
-      - run: uv run --python ${{ matrix.python-version }} pytest
+          filters: |
+            code:
+              - '.github/workflows/**'
+              - 'packages/**'
+              - 'tests/**'
+              - 'examples/**'
+              - 'scripts/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'Justfile'
+            workflows:
+              - '.github/workflows/**'
+          list-files: json
+      - id: select-tests
+        env:
+          CHANGED_FILES_JSON: ${{ steps.filter.outputs.code_files || '[]' }}
+          CI_FORCE_FULL: ${{ github.event_name != 'pull_request' }}
+        run: python3 scripts/select_ci_tests.py >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: quality (${{ matrix.python-version }})
+    needs: changes
+    if: |
+      needs.changes.outputs.code == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    uses: ./.github/workflows/_quality.yml
+    with:
+      python-version: ${{ matrix.python-version }}
+      test-paths: ${{ needs.changes.outputs.test-paths }}
+
+  dependency-review:
+    name: dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@05fe4576374b728f0c523d6a13d64c25081e0803 # v4.8.3
+        with:
+          fail-on-severity: high
 
   actionlint:
+    name: actionlint
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -47,45 +100,74 @@ jobs:
           ACTIONLINT_VERSION: "1.7.12"
         run: |
           set -euo pipefail
-          curl -sSLo /tmp/actionlint.tar.gz             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
+          base_url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -sSLo "/tmp/${archive}" "${base_url}/${archive}"
+          curl -sSLo "/tmp/${archive}.sha256" "${base_url}/${archive}.sha256"
+          (cd /tmp && sha256sum -c "${archive}.sha256")
+          tar -xzf "/tmp/${archive}" -C /tmp actionlint
           sudo install -m 0755 /tmp/actionlint /usr/local/bin/actionlint
-      - name: Validate GitHub Actions workflows
+      - name: Validate workflows
         run: actionlint
 
   build:
+    name: build
+    needs: [changes, quality]
+    if: |
+      (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
-    needs: [quality, actionlint]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
-      - run: |
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Build distributions
+        run: |
           for package in core fastapi storage db auth cache ai observability email channels i18n events security tasks cli; do
             uv build --package "apyra-${package}"
           done
           uv build --package apyra
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: "dist/*"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: distributions
           path: dist/*
+          retention-days: 7
+          if-no-files-found: error
 
-  install:
-    runs-on: ubuntu-latest
+  install-smoke:
+    name: install smoke
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: distributions
           path: dist
-      - run: python -m venv /tmp/apyra-venv
-      - run: /tmp/apyra-venv/bin/pip install dist/*.whl
-      - run: |
+      - run: uv venv --python 3.12 /tmp/apyra-venv
+      - run: uv pip install --python /tmp/apyra-venv/bin/python dist/*.whl
+      - name: Verify imports and PEP 561 markers
+        run: |
           /tmp/apyra-venv/bin/python - <<'PY'
           import importlib
           from importlib.resources import files

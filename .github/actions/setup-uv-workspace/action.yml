@@ -1,0 +1,20 @@
+name: Setup uv workspace
+description: Install uv with the requested Python version and sync all workspace packages and extras using the committed lockfile.
+
+inputs:
+  python-version:
+    description: Python version to install and sync against
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+      with:
+        enable-cache: true
+        python-version: ${{ inputs.python-version }}
+
+    - name: Sync workspace
+      shell: bash
+      run: uv sync --frozen --python ${{ inputs.python-version }} --all-packages --all-extras
