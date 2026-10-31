@@ -1,0 +1,136 @@
+# Reusable quality gate shared by ci.yml and publish.yml.
+name: quality
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to validate against"
+        required: true
+        type: string
+      test-paths:
+        description: "JSON array of pytest paths selected for this run"
+        required: false
+        type: string
+        default: '["."]'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint (${{ inputs.python-version }})
+    if: inputs.python-version == '3.12'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-workspace
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Ruff lint
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" ruff check .
+      - name: Ruff format
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" ruff format --check .
+
+  typecheck:
+    name: typecheck (${{ inputs.python-version }})
+    if: inputs.python-version == '3.12'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-workspace
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: mypy
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" mypy
+      - name: pyright
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" pyright
+      - name: pyright verifytypes
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: |
+          for package in ai auth cache channels cli core db email events fastapi i18n observability security storage tasks; do
+            uv run --no-sync --python "${PYTHON_VERSION}" pyright --verifytypes "apyra.${package}" --ignoreexternal
+          done
+
+  test:
+    name: test (${{ inputs.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-workspace
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: pytest
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+          TEST_PATHS: ${{ inputs.test-paths }}
+        run: |
+          uv run --no-sync --python "${PYTHON_VERSION}" python - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          paths = json.loads(os.environ["TEST_PATHS"])
+          if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+              raise ValueError("TEST_PATHS must be a JSON array of paths")
+          subprocess.run(
+              [
+                  sys.executable,
+                  "-m",
+                  "pytest",
+                  "--cov=packages",
+                  "--cov-report=xml",
+                  "--cov-report=term-missing",
+                  *paths,
+              ],
+              check=True,
+          )
+          PY
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-${{ inputs.python-version }}
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+  security:
+    name: security (${{ inputs.python-version }})
+    if: inputs.python-version == '3.12'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-workspace
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: pip-audit
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" pip-audit --skip-editable
+      - name: bandit
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" bandit -r packages -ll -q

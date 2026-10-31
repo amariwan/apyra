@@ -24,13 +24,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  quality:
+  lock-check:
     if: github.repository == 'amariwan/apyra'
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13"]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
@@ -40,24 +37,28 @@ jobs:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
         with:
           enable-cache: true
-      - run: uv python install ${{ matrix.python-version }}
-      - run: uv sync --python ${{ matrix.python-version }} --all-packages --all-extras
-      - run: uv run --python ${{ matrix.python-version }} ruff check .
-      - run: uv run --python ${{ matrix.python-version }} ruff format --check .
-      - run: uv run --python ${{ matrix.python-version }} mypy
-      - run: uv run --python ${{ matrix.python-version }} pyright
-      - run: |
-          for package in ai auth cache channels cli core db email events fastapi i18n observability security storage tasks; do
-            uv run --python ${{ matrix.python-version }} pyright --verifytypes "apyra.${package}" --ignoreexternal
-          done
-      - run: uv run --python ${{ matrix.python-version }} pytest
+          python-version: "3.12"
+      - name: Verify lockfile freshness
+        run: uv lock --check
+
+  quality:
+    needs: lock-check
+    if: github.repository == 'amariwan/apyra'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    uses: ./.github/workflows/_quality.yml
+    with:
+      python-version: ${{ matrix.python-version }}
 
   build:
-    needs: quality
+    needs: [quality, lock-check]
     if: github.repository == 'amariwan/apyra'
     outputs:
       version: ${{ steps.version.outputs.version }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
       id-token: write
@@ -67,6 +68,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
       - name: Determine release version
         id: version
         env:
@@ -132,7 +136,7 @@ jobs:
           done
           uv build --package apyra
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@c5a222773935d2c5817109c1a4293303cccc3f41 # v1.5.1
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-path: "dist/*"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -145,6 +149,7 @@ jobs:
     needs: build
     if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -156,7 +161,9 @@ jobs:
           name: release-distributions
           path: dist
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
-      - run: uv python install 3.12
+        with:
+          enable-cache: true
+          python-version: "3.12"
       - run: uv run --no-project --python 3.12 scripts/validate_release.py --dist dist
 
   publish-core:
@@ -165,8 +172,10 @@ jobs:
       github.repository == 'amariwan/apyra' &&
       (github.event_name != 'workflow_dispatch' || inputs.publish == true)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: pypi-core
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -184,7 +193,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: python3 scripts/check_pypi_artifacts.py --package apyra-core --version "${RELEASE_VERSION}" --dist publish
-      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
+      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
         with:
           packages-dir: publish
           attestations: true
@@ -194,10 +203,14 @@ jobs:
     needs: [publish-core, build]
     if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
       - name: Wait for apyra-core on PyPI
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
@@ -207,12 +220,12 @@ jobs:
             echo "Release version is unavailable" >&2
             exit 1
           fi
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 15); do
             if curl -fsS "https://pypi.org/pypi/apyra-core/${version}/json" >/dev/null; then
               echo "apyra-core ${version} is available on PyPI"
               exit 0
             fi
-            echo "Waiting for apyra-core ${version} (attempt ${attempt}/30)"
+            echo "Waiting for apyra-core ${version} (attempt ${attempt}/15)"
             sleep 10
           done
           echo "apyra-core ${version} was not found on PyPI" >&2
@@ -222,7 +235,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           version="${RELEASE_VERSION}"
-          uv venv /tmp/apyra-core-check
+          uv venv --python 3.12 /tmp/apyra-core-check
           uv pip install --python /tmp/apyra-core-check/bin/python "apyra-core==${version}"
           /tmp/apyra-core-check/bin/python -c "import apyra.core; print('apyra.core import ok')"
 
@@ -249,8 +262,10 @@ jobs:
           - storage
           - tasks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: ${{ format('pypi-{0}', matrix.package) }}
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -272,7 +287,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
           PACKAGE: ${{ matrix.package }}
         run: python3 scripts/check_pypi_artifacts.py --package "apyra-${PACKAGE}" --version "${RELEASE_VERSION}" --dist publish
-      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
+      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
         with:
           packages-dir: publish
           attestations: true
@@ -281,37 +296,54 @@ jobs:
   verify-packages:
     needs: [publish-leaf, build]
     if: github.repository == 'amariwan/apyra'
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - ai
+          - auth
+          - cache
+          - channels
+          - cli
+          - db
+          - email
+          - events
+          - i18n
+          - observability
+          - security
+          - storage
+          - tasks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
-      - name: Wait for leaf packages on PyPI
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Wait for package on PyPI
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          PACKAGE: ${{ matrix.package }}
         run: |
           version="${RELEASE_VERSION}"
+          package="${PACKAGE}"
+          pypi_name="apyra-${package}"
           if [ -z "${version}" ]; then
             echo "Release version is unavailable" >&2
             exit 1
           fi
-          for package in ai auth cache channels cli db email events i18n observability security storage tasks; do
-            pypi_name="apyra-${package}"
-            available=0
-            for attempt in $(seq 1 30); do
-              if curl -fsS "https://pypi.org/pypi/${pypi_name}/${version}/json" >/dev/null; then
-                available=1
-                break
-              fi
-              echo "Waiting for ${pypi_name} ${version} (attempt ${attempt}/30)"
-              sleep 10
-            done
-            if [ "${available}" != "1" ]; then
-              echo "${pypi_name} ${version} was not found on PyPI" >&2
-              exit 1
+          for attempt in $(seq 1 15); do
+            if curl -fsS "https://pypi.org/pypi/${pypi_name}/${version}/json" >/dev/null; then
+              echo "${pypi_name} ${version} is available on PyPI"
+              exit 0
             fi
-            echo "${pypi_name} ${version} is available on PyPI"
+            echo "Waiting for ${pypi_name} ${version} (attempt ${attempt}/15)"
+            sleep 10
           done
+          echo "${pypi_name} ${version} was not found on PyPI" >&2
+          exit 1
 
   publish-fastapi:
     needs: [verify-packages, build]
@@ -319,8 +351,10 @@ jobs:
       github.repository == 'amariwan/apyra' &&
       (github.event_name != 'workflow_dispatch' || inputs.publish == true)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: pypi-fastapi
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -338,7 +372,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: python3 scripts/check_pypi_artifacts.py --package apyra-fastapi --version "${RELEASE_VERSION}" --dist publish
-      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
+      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
         with:
           packages-dir: publish
           attestations: true
@@ -348,10 +382,14 @@ jobs:
     needs: [publish-fastapi, build]
     if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
       - name: Wait for apyra-fastapi on PyPI
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
@@ -361,12 +399,12 @@ jobs:
             echo "Release version is unavailable" >&2
             exit 1
           fi
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 15); do
             if curl -fsS "https://pypi.org/pypi/apyra-fastapi/${version}/json" >/dev/null; then
               echo "apyra-fastapi ${version} is available on PyPI"
               exit 0
             fi
-            echo "Waiting for apyra-fastapi ${version} (attempt ${attempt}/30)"
+            echo "Waiting for apyra-fastapi ${version} (attempt ${attempt}/15)"
             sleep 10
           done
           echo "apyra-fastapi ${version} was not found on PyPI" >&2
@@ -376,7 +414,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           version="${RELEASE_VERSION}"
-          uv venv /tmp/apyra-fastapi-check
+          uv venv --python 3.12 /tmp/apyra-fastapi-check
           uv pip install --python /tmp/apyra-fastapi-check/bin/python "apyra-fastapi==${version}"
           /tmp/apyra-fastapi-check/bin/python -c "import apyra.fastapi; print('apyra.fastapi import ok')"
 
@@ -386,8 +424,10 @@ jobs:
       github.repository == 'amariwan/apyra' &&
       (github.event_name != 'workflow_dispatch' || inputs.publish == true)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: pypi-meta
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -406,7 +446,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: python3 scripts/check_pypi_artifacts.py --package apyra --version "${RELEASE_VERSION}" --dist publish
-      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
+      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
         with:
           packages-dir: publish
           attestations: true
@@ -416,10 +456,14 @@ jobs:
     needs: [publish-meta, build]
     if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
       - name: Determine release version
         id: version
         env:
@@ -427,15 +471,7 @@ jobs:
         run: |
           version="${RELEASE_VERSION}"
           if [ -z "${version}" ]; then
-            if [ "${{ github.ref_type }}" = "tag" ]; then
-              version="${{ github.ref_name }}"
-              version="${version#v}"
-            else
-              version="${{ inputs.version }}"
-            fi
-          fi
-          if [ -z "${version}" ]; then
-            echo "Could not determine release version" >&2
+            echo "Release version is unavailable; build output is required" >&2
             exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
@@ -444,7 +480,7 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           version="${RELEASE_VERSION}"
-          uv venv /tmp/apyra-fastapi-smoke
+          uv venv --python 3.12 /tmp/apyra-fastapi-smoke
           uv pip install --python /tmp/apyra-fastapi-smoke/bin/python "apyra-fastapi==${version}"
           /tmp/apyra-fastapi-smoke/bin/python -c "import apyra.fastapi; print('apyra.fastapi import ok')"
 
@@ -452,7 +488,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          uv venv /tmp/apyra-pypi-smoke
+          uv venv --python 3.12 /tmp/apyra-pypi-smoke
           uv pip install --python /tmp/apyra-pypi-smoke/bin/python "apyra[all]==${RELEASE_VERSION}"
           /tmp/apyra-pypi-smoke/bin/python - <<'PY'
           import importlib
@@ -472,3 +508,28 @@ jobs:
 
           print("PyPI smoke test passed")
           PY
+
+  github-release:
+    name: GitHub release
+    needs: [smoke-test, build]
+    if: github.repository == 'amariwan/apyra' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-distributions
+          path: dist
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" dist/* \
+            --title "v${VERSION}" \
+            --generate-notes
