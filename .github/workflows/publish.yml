@@ -169,6 +169,9 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-distributions
@@ -177,6 +180,10 @@ jobs:
         run: |
           mkdir -p publish
           cp dist/apyra_core-* publish/
+      - name: Verify PyPI artifact integrity
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py --package apyra-core --version "${RELEASE_VERSION}" --dist publish
       - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
@@ -246,6 +253,9 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-distributions
@@ -257,6 +267,11 @@ jobs:
           mkdir -p publish
           normalized="${PACKAGE//-/_}"
           cp "dist/apyra_${normalized}-"* publish/
+      - name: Verify PyPI artifact integrity
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          PACKAGE: ${{ matrix.package }}
+        run: python3 scripts/check_pypi_artifacts.py --package "apyra-${PACKAGE}" --version "${RELEASE_VERSION}" --dist publish
       - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
@@ -308,6 +323,9 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-distributions
@@ -316,6 +334,10 @@ jobs:
         run: |
           mkdir -p publish
           cp dist/apyra_fastapi-* publish/
+      - name: Verify PyPI artifact integrity
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py --package apyra-fastapi --version "${RELEASE_VERSION}" --dist publish
       - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
@@ -368,6 +390,9 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-distributions
@@ -377,6 +402,10 @@ jobs:
           mkdir -p publish
           find dist -maxdepth 1 -type f \( -name 'apyra-[0-9]*.whl' -o -name 'apyra-[0-9]*.tar.gz' \) -exec cp {} publish/ \;
           test -n "$(find publish -type f -print -quit)"
+      - name: Verify PyPI artifact integrity
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py --package apyra --version "${RELEASE_VERSION}" --dist publish
       - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
