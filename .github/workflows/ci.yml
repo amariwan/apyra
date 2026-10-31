@@ -193,47 +193,30 @@ jobs:
 
   required-checks:
     name: required checks
-    needs: [changes, lock-check, quality, build, install-smoke, actionlint]
+    needs: [changes, lock-check, quality, build, install-smoke, actionlint, attest-build]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Verify mandatory jobs
         env:
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          LOCK_CHECK_RESULT: ${{ needs.lock-check.result }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          BUILD_RESULT: ${{ needs.build.result }}
-          INSTALL_SMOKE_RESULT: ${{ needs.install-smoke.result }}
-          ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
-        run: |
-          set -euo pipefail
-          failed=0
-          for pair in \
-            "changes=${CHANGES_RESULT}" \
-            "lock-check=${LOCK_CHECK_RESULT}" \
-            "quality=${QUALITY_RESULT}" \
-            "build=${BUILD_RESULT}" \
-            "install-smoke=${INSTALL_SMOKE_RESULT}" \
-            "actionlint=${ACTIONLINT_RESULT}"; do
-            name="${pair%%=*}"
-            result="${pair#*=}"
-            echo "${name}: ${result}"
-            if [ "${result}" != "success" ] && [ "${result}" != "skipped" ]; then
-              failed=1
-            fi
-          done
-          # actionlint is allowed to be skipped only when no workflows changed
-          if [ "${ACTIONLINT_RESULT}" = "skipped" ]; then
-            echo "actionlint skipped (no workflow changes)"
-          fi
-          if [ "${failed}" -ne 0 ]; then
-            echo "One or more mandatory CI jobs did not succeed" >&2
-            exit 1
-          fi
-          echo "All mandatory CI jobs succeeded"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          CHANGES_CODE: ${{ needs.changes.outputs.code }}
+          CHANGES_WORKFLOWS: ${{ needs.changes.outputs.workflows }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          RESULT_CHANGES: ${{ needs.changes.result }}
+          RESULT_LOCK_CHECK: ${{ needs.lock-check.result }}
+          RESULT_QUALITY: ${{ needs.quality.result }}
+          RESULT_ACTIONLINT: ${{ needs.actionlint.result }}
+          RESULT_BUILD: ${{ needs.build.result }}
+          RESULT_INSTALL_SMOKE: ${{ needs.install-smoke.result }}
+          RESULT_ATTEST_BUILD: ${{ needs.attest-build.result }}
+        run: python3 scripts/check_required_ci.py
 
   install-smoke:
     name: install smoke
