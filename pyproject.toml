@@ -29,6 +29,7 @@ package = false
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["packages", "tests"]
 python_files = ["test_*.py", "*_test.py"]
 pythonpath = ["packages/core/src", "packages/fastapi/src"]
@@ -60,6 +61,7 @@ packages = [
     "apyra.auth",
     "apyra.cache",
     "apyra.observability",
+    "apyra.email",
     "apyra.channels",
     "apyra.ai",
     "apyra.i18n",
@@ -74,4 +76,21 @@ ignore_missing_imports = true
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
 include = ["packages", "tests"]
-extraPaths = ["packages/core/src", "packages/fastapi/src"]
+strict = ["packages/*/src"]
+extraPaths = [
+    "packages/core/src",
+    "packages/fastapi/src",
+    "packages/storage/src",
+    "packages/db/src",
+    "packages/auth/src",
+    "packages/cache/src",
+    "packages/ai/src",
+    "packages/observability/src",
+    "packages/email/src",
+    "packages/channels/src",
+    "packages/i18n/src",
+    "packages/events/src",
+    "packages/security/src",
+    "packages/tasks/src",
+    "packages/cli/src",
+]

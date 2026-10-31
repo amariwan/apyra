@@ -6,7 +6,10 @@ Async database infrastructure and repositories for Apyra (SQLAlchemy 2.x).
 
 ```bash
 uv add apyra-db
-# plus your driver, e.g. asyncpg / aiosqlite
+uv add 'apyra-db[sqlite]'     # aiosqlite driver
+uv add 'apyra-db[postgres]'   # asyncpg and psycopg
+uv add 'apyra-db[mysql]'      # asyncmy and pymysql
+uv add 'apyra-db[migrations]' # Alembic
 ```
 
 ## Quick usage

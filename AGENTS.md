@@ -16,15 +16,15 @@ uv sync --all-packages --all-extras
 - Lint: `uv run ruff check .` then `uv run ruff format --check .` (`just lint`).
 - Format: `uv run ruff format .` (`just fmt`); auto-fix: `uv run ruff check --fix .` (`just fix`).
 - Typecheck: `uv run mypy` and `uv run pyright` (both must pass; CI runs both on 3.12 and 3.13).
-- Tests: `uv run pytest` or `just test-all` run the full suite. Marker-filtered `just test-unit` and `just test-integration` are not representative until tests are marked.
-- Full gate: `just check` runs lint, mypy, pyright, and `uv run pytest`.
-- Build: CI and `just build` both build core fastapi storage db auth cache ai observability email channels i18n events security tasks cli, then apyra.
+- Tests: `uv run pytest`, `just test`, and `just test-all` run the complete suite. `just test-unit` and `just test-integration` select markers; most tests are not marked, so these are not substitutes for the full suite.
+- Full gate: `just check` runs lint, mypy, Pyright, and the complete pytest suite.
+- Build: CI and `just build` build all packages: core fastapi storage db auth cache ai observability email channels i18n events security tasks cli, then apyra.
 - Install sanity: `uv build --package apyra-<name>` then install wheels into a fresh venv and import `apyra.<name>`.
 
 ## Conventions
 
-- Settings use pydantic-settings with env prefix `APYRA_` and load `.env` / `.env.local`.
+- Settings use pydantic-settings with package-specific environment names and env files. For example, core uses `APYRA_` and auth uses `AUTH_`; email/channels load `.env.dev`, while core/auth/db/storage load `.env.local`.
 - Ruff: line-length 100, target py312, src = packages/tests/examples; ignores S101, N999. Per-package pytest config sets `pythonpath = ["src"]`.
-- mypy lists most namespace packages explicitly in root `pyproject.toml`; pyright covers `packages` and `tests` in basic mode. Review both configurations when adding packages.
+- mypy and Pyright currently cover all 15 code packages; Pyright also includes `tests`. New packages need adding to mypy `packages`/`mypy_path` and Pyright `extraPaths`.
 - Metapackage `apyra` has `module-name = []` (no source); its import surface comes from `apyra-core`'s namespace package. `apyra[all]` pulls all optional packages.
 - Examples use editable path sources (`[tool.uv.sources]`), not workspace membership.

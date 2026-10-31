@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -29,8 +29,18 @@ def _normalize_prefix(prefix: str) -> str:
     return prefix.rstrip("/")
 
 
+def _validate_rate_limit(max_requests: int, window_seconds: int) -> None:
+    if max_requests <= 0:
+        raise ValueError("rate_limit_max_requests must be positive")
+    if window_seconds <= 0:
+        raise ValueError("rate_limit_window_seconds must be positive")
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add baseline browser security headers without replacing app policy."""
+
     async def dispatch(self, request: Any, call_next: Any) -> Any:
+        """Add security headers to the response when the app did not set them."""
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
@@ -40,7 +50,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Apply a process-local fixed-window limit keyed by client IP address."""
+
     def __init__(self, app: Any, *, max_requests: int = 100, window_seconds: int = 60) -> None:
+        _validate_rate_limit(max_requests, window_seconds)
         super().__init__(app)
         self.max_requests = max_requests
         self.window_seconds = window_seconds
@@ -48,9 +61,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._lock = asyncio.Lock()
 
     async def dispatch(self, request: Any, call_next: Any) -> Any:
-        if self.max_requests <= 0 or self.window_seconds <= 0:
-            return await call_next(request)
-
+        """Reject requests over the limit with HTTP 429 and a retry hint."""
         client_host = request.client.host if request.client is not None else "unknown"
         now = time.monotonic()
         async with self._lock:
@@ -103,21 +114,39 @@ def create_app(
     process-wide singletons and can be called repeatedly in tests.
     """
 
+    if rate_limit_enabled:
+        _validate_rate_limit(rate_limit_max_requests, rate_limit_window_seconds)
+
     resolved_settings = settings or Settings()
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        for hook in startup:
-            result = hook(app)
-            if hasattr(result, "__await__"):
-                await result  # type: ignore[misc]
-        try:
-            yield
-        finally:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+        async def run_shutdown_hooks() -> list[BaseException]:
+            errors: list[BaseException] = []
             for hook in shutdown:
+                try:
+                    result = hook(app)
+                    if hasattr(result, "__await__"):
+                        await result  # type: ignore[misc]
+                except BaseException as exc:  # noqa: BLE001
+                    errors.append(exc)
+            return errors
+
+        try:
+            for hook in startup:
                 result = hook(app)
                 if hasattr(result, "__await__"):
                     await result  # type: ignore[misc]
+            yield
+        except BaseException as exc:
+            errors = await run_shutdown_hooks()
+            if errors:
+                raise BaseExceptionGroup("application lifespan and shutdown failed", [exc, *errors])
+            raise
+        else:
+            errors = await run_shutdown_hooks()
+            if errors:
+                raise BaseExceptionGroup("application shutdown hooks failed", errors)
 
     app = FastAPI(
         title=title,

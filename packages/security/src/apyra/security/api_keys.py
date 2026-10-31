@@ -8,6 +8,7 @@ import secrets
 
 
 def generate_api_key(prefix: str = "apyra") -> tuple[str, str]:
+    """Return a random plaintext API key and its SHA-256 verification digest."""
     secret = secrets.token_urlsafe(32)
     key = f"{prefix}_{secret}"
     hashed = hashlib.sha256(key.encode("utf-8")).hexdigest()
@@ -15,5 +16,10 @@ def generate_api_key(prefix: str = "apyra") -> tuple[str, str]:
 
 
 def verify_api_key(key: str, hashed: str) -> bool:
+    """Compare an API key's SHA-256 digest with its stored hexadecimal digest."""
+    if len(hashed) != hashlib.sha256().digest_size * 2:
+        return False
+    if any(character not in "0123456789abcdef" for character in hashed):
+        return False
     actual = hashlib.sha256(key.encode("utf-8")).hexdigest()
     return hmac.compare_digest(actual, hashed)

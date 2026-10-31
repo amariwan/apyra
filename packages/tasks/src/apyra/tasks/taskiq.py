@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from importlib import import_module
 from typing import Any, TypeVar
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -34,12 +35,14 @@ class TaskiqAdapter:
         if self._broker is not None:
             return self._broker
         try:
-            from taskiq.brokers.inmemory import InMemoryBroker  # pyright: ignore[reportMissingImports]
-        except ImportError as exc:
+            taskiq = import_module("taskiq")
+        except ModuleNotFoundError as exc:
+            if exc.name != "taskiq":
+                raise
             raise TaskiqUnavailableError(
                 "Taskiq is not installed; install apyra-tasks[taskiq]"
             ) from exc
-        self._broker = InMemoryBroker()
+        self._broker = taskiq.InMemoryBroker()
         return self._broker
 
     def task(
@@ -49,6 +52,7 @@ class TaskiqAdapter:
         retries: int | None = None,
         timeout: float | None = None,
     ) -> Any:
+        """Decorate a callable with Taskiq retry and timeout options."""
         broker = self._resolve_broker()
         resolved_retries = self._default_retries if retries is None else retries
         resolved_timeout = self._default_timeout if timeout is None else timeout
@@ -62,6 +66,7 @@ class TaskiqAdapter:
         return decorator
 
     async def run(self, task: Any, *args: Any, **kwargs: Any) -> Any:
+        """Run or enqueue a Taskiq task and return its resolved result."""
         if hasattr(task, "kiq"):
             task_result = await task.kiq(*args, **kwargs)
             if hasattr(task_result, "wait_result"):

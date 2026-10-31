@@ -5,17 +5,22 @@ from __future__ import annotations
 import asyncio
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage as SMTPMessage
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from apyra.email.models import EmailMessage
 from apyra.email.settings import EmailSettings
 
-logger = logging.getLogger("app_logger")
+logger: logging.Logger = logging.getLogger("app_logger")
 
 
 class EmailBackend(Protocol):
-    async def send(self, message: EmailMessage) -> None: ...
+    """Async contract implemented by email delivery backends."""
+
+    async def send(self, message: EmailMessage) -> None:
+        """Deliver one message or raise when the provider rejects it."""
+        ...
 
 
 class ConsoleEmailBackend:
@@ -25,6 +30,7 @@ class ConsoleEmailBackend:
         self.sent: list[EmailMessage] = []
 
     async def send(self, message: EmailMessage) -> None:
+        """Record the message and log metadata without exposing its contents."""
         self.sent.append(message)
         logger.info(
             "Email accepted by console backend: subject=%r recipients=%s",
@@ -34,10 +40,13 @@ class ConsoleEmailBackend:
 
 
 class SMTPEmailBackend:
+    """Deliver messages through SMTP, STARTTLS, or implicit TLS."""
+
     def __init__(self, settings: EmailSettings) -> None:
         self._settings = settings
 
     async def send(self, message: EmailMessage) -> None:
+        """Send the message using SMTP without blocking the event loop."""
         await asyncio.to_thread(self._send_sync, message)
 
     def _send_sync(self, message: EmailMessage) -> None:
@@ -57,15 +66,23 @@ class SMTPEmailBackend:
         if message.html:
             smtp_message.add_alternative(message.html, subtype="html")
 
-        smtp_class = smtplib.SMTP_SSL if settings.EMAIL_SMTP_SSL else smtplib.SMTP
-        with smtp_class(
-            host,
-            settings.EMAIL_SMTP_PORT,
-            timeout=settings.EMAIL_TIMEOUT_SECONDS,
-        ) as client:
-            if settings.EMAIL_SMTP_STARTTLS and not settings.EMAIL_SMTP_SSL:
-                import ssl
+        smtp_client: smtplib.SMTP | smtplib.SMTP_SSL
+        if settings.EMAIL_SMTP_SSL:
+            smtp_client = smtplib.SMTP_SSL(
+                host,
+                settings.EMAIL_SMTP_PORT,
+                timeout=settings.EMAIL_TIMEOUT_SECONDS,
+                context=ssl.create_default_context(),
+            )
+        else:
+            smtp_client = smtplib.SMTP(
+                host,
+                settings.EMAIL_SMTP_PORT,
+                timeout=settings.EMAIL_TIMEOUT_SECONDS,
+            )
 
+        with smtp_client as client:
+            if settings.EMAIL_SMTP_STARTTLS and not settings.EMAIL_SMTP_SSL:
                 client.starttls(context=ssl.create_default_context())
             if settings.EMAIL_SMTP_USERNAME:
                 password = (
@@ -74,13 +91,17 @@ class SMTPEmailBackend:
                     else ""
                 )
                 client.login(settings.EMAIL_SMTP_USERNAME, password)
-            client.send_message(smtp_message)
+            # Keep SMTP envelope recipients authoritative; arbitrary Cc/Bcc
+            # headers must not expand the set of recipients from the payload.
+            client.send_message(smtp_message, to_addrs=message.recipients)
 
 
 __all__ = ["ConsoleEmailBackend", "EmailBackend", "SMTPEmailBackend"]
 
 
 class _HttpBackend:
+    """Shared timeout and client construction for HTTP provider adapters."""
+
     def __init__(self, timeout_seconds: float = 10.0, transport: object | None = None) -> None:
         self._timeout = timeout_seconds
         self._transport = transport
@@ -94,11 +115,14 @@ class _HttpBackend:
 
 
 class SendGridEmailBackend(_HttpBackend):
+    """Deliver messages through SendGrid's HTTP API using the ``providers`` extra."""
+
     def __init__(self, settings: EmailSettings, *, transport: object | None = None) -> None:
         super().__init__(settings.EMAIL_TIMEOUT_SECONDS, transport)
         self._settings = settings
 
     async def send(self, message: EmailMessage) -> None:
+        """Send one message through the SendGrid HTTP API."""
 
         api_key = self._settings.EMAIL_SENDGRID_API_KEY
         if not api_key:
@@ -114,6 +138,8 @@ class SendGridEmailBackend(_HttpBackend):
             "subject": message.subject,
             "content": content,
         }
+        if message.reply_to:
+            payload["reply_to"] = {"email": message.reply_to}
         async with self._client() as client:
             response = await client.post(
                 "https://api.sendgrid.com/v3/mail/send",
@@ -124,11 +150,14 @@ class SendGridEmailBackend(_HttpBackend):
 
 
 class MailgunEmailBackend(_HttpBackend):
+    """Deliver messages through Mailgun's HTTP API using the ``providers`` extra."""
+
     def __init__(self, settings: EmailSettings, *, transport: object | None = None) -> None:
         super().__init__(settings.EMAIL_TIMEOUT_SECONDS, transport)
         self._settings = settings
 
     async def send(self, message: EmailMessage) -> None:
+        """Send one message through the Mailgun HTTP API."""
 
         api_key = self._settings.EMAIL_MAILGUN_API_KEY
         domain = self._settings.EMAIL_MAILGUN_DOMAIN
@@ -142,6 +171,8 @@ class MailgunEmailBackend(_HttpBackend):
         }
         if message.html:
             data["html"] = message.html
+        if message.reply_to:
+            data["h:Reply-To"] = message.reply_to
         async with self._client() as client:
             response = await client.post(
                 f"https://api.mailgun.net/v3/{domain}/messages",
@@ -152,11 +183,14 @@ class MailgunEmailBackend(_HttpBackend):
 
 
 class PostmarkEmailBackend(_HttpBackend):
+    """Deliver messages through Postmark's HTTP API using the ``providers`` extra."""
+
     def __init__(self, settings: EmailSettings, *, transport: object | None = None) -> None:
         super().__init__(settings.EMAIL_TIMEOUT_SECONDS, transport)
         self._settings = settings
 
     async def send(self, message: EmailMessage) -> None:
+        """Send one message through the Postmark HTTP API."""
 
         token = self._settings.EMAIL_POSTMARK_SERVER_TOKEN
         if not token:
@@ -169,6 +203,8 @@ class PostmarkEmailBackend(_HttpBackend):
         }
         if message.html:
             payload["HtmlBody"] = message.html
+        if message.reply_to:
+            payload["ReplyTo"] = message.reply_to
         async with self._client() as client:
             response = await client.post(
                 "https://api.postmarkapp.com/email",
@@ -179,11 +215,14 @@ class PostmarkEmailBackend(_HttpBackend):
 
 
 class BrevoEmailBackend(_HttpBackend):
+    """Deliver messages through Brevo's HTTP API using the ``providers`` extra."""
+
     def __init__(self, settings: EmailSettings, *, transport: object | None = None) -> None:
         super().__init__(settings.EMAIL_TIMEOUT_SECONDS, transport)
         self._settings = settings
 
     async def send(self, message: EmailMessage) -> None:
+        """Send one message through the Brevo HTTP API."""
 
         api_key = self._settings.EMAIL_BREVO_API_KEY
         if not api_key:
@@ -196,6 +235,8 @@ class BrevoEmailBackend(_HttpBackend):
         }
         if message.html:
             payload["htmlContent"] = message.html
+        if message.reply_to:
+            payload["replyTo"] = {"email": message.reply_to}
         async with self._client() as client:
             response = await client.post(
                 "https://api.brevo.com/v3/smtp/email",
@@ -206,20 +247,26 @@ class BrevoEmailBackend(_HttpBackend):
 
 
 class SESEmailBackend:
+    """Deliver messages through Amazon SES using the ``providers`` extra."""
+
     def __init__(self, settings: EmailSettings, *, client: object | None = None) -> None:
         self._settings = settings
         self._client: Any = client
 
     async def send(self, message: EmailMessage) -> None:
+        """Send one message through Amazon SES."""
         import asyncio
 
         client = self._client
         if client is None:
             try:
-                import boto3
-            except ImportError as exc:
+                import boto3  # pyright: ignore[reportMissingTypeStubs]
+            except ModuleNotFoundError as exc:
+                if exc.name != "boto3":
+                    raise
                 raise RuntimeError("SES backend requires boto3") from exc
-            client = boto3.client("ses", region_name=self._settings.EMAIL_SES_REGION)
+            boto3_api: Any = cast(Any, boto3)
+            client = boto3_api.client("ses", region_name=self._settings.EMAIL_SES_REGION)
             self._client = client
 
         def _send() -> None:
@@ -230,6 +277,7 @@ class SESEmailBackend:
                 Source=self._settings.EMAIL_FROM,
                 Destination={"ToAddresses": list(message.recipients)},
                 Message={"Subject": {"Data": message.subject}, "Body": body},
+                **({"ReplyToAddresses": [message.reply_to]} if message.reply_to else {}),
             )
 
         await asyncio.to_thread(_send)

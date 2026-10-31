@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import ClassVar
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class EmailBackendName(StrEnum):
+    """Supported backend names selected by ``EMAIL_BACKEND``."""
+
     CONSOLE = "console"
     SMTP = "smtp"
     SES = "ses"
@@ -20,7 +23,9 @@ class EmailBackendName(StrEnum):
 
 
 class EmailSettings(BaseSettings):
-    model_config = SettingsConfigDict(
+    """Environment-backed provider, queue, and delivery settings."""
+
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_file=(".env", ".env.dev"), case_sensitive=False, extra="ignore"
     )
 
@@ -34,26 +39,32 @@ class EmailSettings(BaseSettings):
     EMAIL_SMTP_STARTTLS: bool = True
     EMAIL_SMTP_SSL: bool = False
     EMAIL_TIMEOUT_SECONDS: float = Field(default=10.0, gt=0)
-    EMAIL_SENDGRID_API_KEY: str | None = None
-    EMAIL_MAILGUN_API_KEY: str | None = None
+    EMAIL_SENDGRID_API_KEY: str | None = Field(default=None, repr=False)
+    EMAIL_MAILGUN_API_KEY: str | None = Field(default=None, repr=False)
     EMAIL_MAILGUN_DOMAIN: str | None = None
-    EMAIL_POSTMARK_SERVER_TOKEN: str | None = None
-    EMAIL_BREVO_API_KEY: str | None = None
+    EMAIL_POSTMARK_SERVER_TOKEN: str | None = Field(default=None, repr=False)
+    EMAIL_BREVO_API_KEY: str | None = Field(default=None, repr=False)
     EMAIL_SES_REGION: str = "us-east-1"
     EMAIL_USE_CELERY: bool = False
-    EMAIL_CELERY_BROKER_URL: str | None = None
+    EMAIL_QUEUE_FALLBACK_TO_DIRECT: bool = True
+    EMAIL_CELERY_BROKER_URL: str | None = Field(default=None, repr=False)
     EMAIL_CELERY_TASK_NAME: str = "app.core.email.send"
 
     @property
     def ENABLED(self) -> bool:
+        """Return the legacy uppercase alias for ``EMAIL_ENABLED``."""
         return self.EMAIL_ENABLED
 
     @property
     def enabled(self) -> bool:
+        """Return the lowercase alias for ``EMAIL_ENABLED``."""
         return self.EMAIL_ENABLED
 
     @model_validator(mode="after")
     def validate_selected_backends(self) -> EmailSettings:
+        """Validate required provider settings when delivery is enabled."""
+        if not self.EMAIL_ENABLED:
+            return self
         if self.EMAIL_BACKEND is EmailBackendName.SMTP and not self.EMAIL_SMTP_HOST:
             raise ValueError("EMAIL_SMTP_HOST is required for the SMTP backend")
         if self.EMAIL_BACKEND is EmailBackendName.SENDGRID and not self.EMAIL_SENDGRID_API_KEY:
@@ -75,6 +86,8 @@ class EmailSettings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_email_settings() -> EmailSettings:
+    """Return the process-cached email settings."""
+
     return EmailSettings()
 
 

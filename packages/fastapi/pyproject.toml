@@ -8,11 +8,16 @@ license = "MIT"
 authors = [{ name = "amariwan" }]
 dependencies = [
     "apyra-core>=0.1.0,<0.2.0",
+    "apyra-auth>=0.1.0,<0.2.0",
+    "apyra-security>=0.1.0,<0.2.0",
     "fastapi>=0.115.0",
+    "starlette",
 ]
 
 [tool.uv.sources]
 apyra-core = { workspace = true }
+apyra-auth = { workspace = true }
+apyra-security = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]
@@ -34,5 +39,6 @@ src = ["src", "tests"]
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]

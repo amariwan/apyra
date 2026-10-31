@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter
 
@@ -20,22 +20,27 @@ def _route_decorator(
 
 
 def get(path: str, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Mark a class method as a GET route for a ``@cbv`` router."""
     return _route_decorator("GET", path, **kwargs)
 
 
 def post(path: str, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Mark a class method as a POST route for a ``@cbv`` router."""
     return _route_decorator("POST", path, **kwargs)
 
 
 def put(path: str, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Mark a class method as a PUT route for a ``@cbv`` router."""
     return _route_decorator("PUT", path, **kwargs)
 
 
 def delete(path: str, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Mark a class method as a DELETE route for a ``@cbv`` router."""
     return _route_decorator("DELETE", path, **kwargs)
 
 
 def patch(path: str, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Mark a class method as a PATCH route for a ``@cbv`` router."""
     return _route_decorator("PATCH", path, **kwargs)
 
 
@@ -44,8 +49,11 @@ def cbv(router: APIRouter) -> Callable[[type[Any]], type[Any]]:
 
     def decorator(cls: type[Any]) -> type[Any]:
         for name, method in list(cls.__dict__.items()):
-            route = getattr(method, "__cbv_route__", None)
-            if not isinstance(route, tuple):
+            route = cast(
+                tuple[str, str, dict[str, Any]] | None,
+                getattr(method, "__cbv_route__", None),
+            )
+            if not isinstance(route, tuple) or len(route) != 3:
                 continue
             http_method, path, kwargs = route
 

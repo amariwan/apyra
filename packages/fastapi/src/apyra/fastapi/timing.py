@@ -14,6 +14,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
     """Add an ``X-Response-Time`` header to every response."""
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:
+        """Add elapsed request processing time to the response header."""
         started_at = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - started_at) * 1000

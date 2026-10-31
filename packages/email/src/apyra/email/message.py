@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True, slots=True)
 class EmailMessage:
+    """Legacy message shape with a single body, optional sender, HTML flag, and byte attachments."""
+
     to: tuple[str, ...]
     subject: str
     body: str

@@ -7,8 +7,12 @@ distributions.
 
 ```text
 apyra (metapackage)
-  -> apyra-fastapi
   -> apyra-core
+
+apyra[web]
+  -> apyra-fastapi
+       -> apyra-core
+       -> apyra-auth
 ```
 
 Optional infrastructure packages will depend only on the packages they actually

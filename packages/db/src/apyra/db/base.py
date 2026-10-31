@@ -15,6 +15,8 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
+    """Add timezone-aware creation and update timestamps to a model."""
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -22,6 +24,8 @@ class TimestampMixin:
 
 
 class UUIDPrimaryKeyMixin:
+    """Add a UUID primary key generated when a model is created."""
+
     id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )

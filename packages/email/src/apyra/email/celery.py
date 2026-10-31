@@ -15,7 +15,11 @@ EmailTask = Callable[..., None]
 
 
 class CeleryTaskRegistrar(Protocol):
-    def task(self, *, name: str) -> Callable[[EmailTask], EmailTask]: ...
+    """Minimal Celery application contract needed to register the email task."""
+
+    def task(self, *, name: str) -> Callable[[EmailTask], EmailTask]:
+        """Register and return a task under the supplied name."""
+        ...
 
 
 def register_celery_email_task(
@@ -23,9 +27,9 @@ def register_celery_email_task(
     *,
     backend: EmailBackend | None = None,
 ) -> EmailTask:
-    """Register the configured worker task and return it for testing/introspection."""
+    """Register the configured synchronous worker task and return it for inspection."""
 
-    direct_backend = backend or build_email_backend()
+    direct_backend = backend if backend is not None else build_email_backend()
     task_name = get_email_settings().EMAIL_CELERY_TASK_NAME
 
     def deliver_email(*, message: dict[str, object]) -> None:

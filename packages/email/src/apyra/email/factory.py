@@ -25,6 +25,8 @@ class _CeleryFactory(Protocol):
 
 
 def build_email_backend() -> EmailBackend:
+    """Construct the backend selected by the current email settings."""
+
     settings = get_email_settings()
     if settings.EMAIL_BACKEND is EmailBackendName.SMTP:
         return SMTPEmailBackend(settings)
@@ -48,14 +50,23 @@ def _build_queue() -> EmailQueue | None:
     try:
         celery_factory = cast(_CeleryFactory, vars(import_module("celery.app.base"))["Celery"])
     except ImportError:
-        return None
+        raise RuntimeError("EMAIL_USE_CELERY requires the 'celery' project extra") from None
     celery_app = celery_factory("core_email", broker=settings.EMAIL_CELERY_BROKER_URL)
     return CeleryEmailQueue(celery_app, settings.EMAIL_CELERY_TASK_NAME)
 
 
 @lru_cache(maxsize=1)
 def get_email_dispatcher() -> EmailDispatcher:
-    return EmailDispatcher(build_email_backend(), _build_queue())
+    """Return the process-cached dispatcher configured from email settings."""
+
+    settings = get_email_settings()
+    if not settings.EMAIL_ENABLED:
+        return EmailDispatcher(None)
+    return EmailDispatcher(
+        build_email_backend(),
+        _build_queue(),
+        fallback_on_enqueue_error=settings.EMAIL_QUEUE_FALLBACK_TO_DIRECT,
+    )
 
 
 async def close_email_dispatcher() -> None:

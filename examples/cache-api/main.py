@@ -4,7 +4,8 @@ Demonstrates the ``@cached`` decorator with an in-memory TTL cache.
 
 Run with::
 
-    uv run uvicorn main:app --app-dir examples/cache-api --reload
+    uv run --project examples/cache-api uvicorn main:app \
+      --app-dir examples/cache-api --reload
 """
 
 from __future__ import annotations

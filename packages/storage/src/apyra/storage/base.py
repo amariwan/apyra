@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from abc import ABC, abstractmethod
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 
 from .exceptions import StorageError
 
@@ -28,13 +28,23 @@ def normalize_storage_path(path: str) -> str:
     stripped = path.strip()
     if not stripped:
         raise StorageError("storage path must not be empty")
+    if "\x00" in stripped:
+        raise StorageError("storage path is invalid")
 
     normalized = str(PurePosixPath(stripped))
     if not normalized or normalized in {".", "/"}:
         raise StorageError("storage path must not be empty")
 
     pure = PurePosixPath(normalized)
-    if pure.is_absolute() or ".." in pure.parts:
+    windows = PureWindowsPath(stripped)
+    if (
+        pure.is_absolute()
+        or windows.drive
+        or windows.root
+        or ".." in pure.parts
+        or ".." in windows.parts
+        or any(part.rstrip(" .") in {"", ".", ".."} for part in windows.parts)
+    ):
         raise StorageError("storage path is invalid")
 
     return normalized

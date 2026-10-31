@@ -8,9 +8,12 @@ license = "MIT"
 authors = [{ name = "amariwan" }]
 dependencies = [
     "apyra-core>=0.1.0,<0.2.0",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
 ]
 
 [project.optional-dependencies]
+websocket = ["fastapi>=0.115.0"]
 redis = ["redis>=5.0.0"]
 
 [tool.uv.sources]
@@ -32,5 +35,6 @@ src = ["src", "tests"]
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]

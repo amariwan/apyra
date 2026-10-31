@@ -3,7 +3,100 @@
 from __future__ import annotations
 
 import argparse
+import keyword
+import re
 from pathlib import Path
+
+_COOKIE_AUTH_MAIN = """import os
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+
+from apyra.core import Settings
+from apyra.fastapi import create_app, get_current_token, require_csrf
+from apyra.security import generate_csrf_token
+
+csrf_secret = os.environ.get("APYRA_CSRF_SECRET", "")
+if len(csrf_secret.encode("utf-8")) < 32:
+    raise RuntimeError("APYRA_CSRF_SECRET must contain at least 32 UTF-8 bytes")
+
+secure_setting = os.environ.get("APYRA_COOKIE_SECURE", "true").lower()
+if secure_setting not in {"true", "false"}:
+    raise RuntimeError("APYRA_COOKIE_SECURE must be 'true' or 'false'")
+csrf_cookie_secure = secure_setting == "true"
+csrf_dependency = require_csrf(csrf_secret, binding_cookie_name="access_token")
+
+router = APIRouter()
+
+
+@router.get("/csrf")
+async def issue_csrf_token(
+    request: Request,
+    response: Response,
+    _payload: dict[str, object] = Depends(get_current_token),
+) -> dict[str, str]:
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="missing_authorization")
+    token = generate_csrf_token(csrf_secret, binding=access_token)
+    response.set_cookie(
+        "csrf_token",
+        token,
+        httponly=False,
+        secure=csrf_cookie_secure,
+        samesite="lax",
+    )
+    return {"csrf_token": token}
+
+
+@router.post("/write")
+async def write(
+    _payload: dict[str, object] = Depends(get_current_token),
+    _csrf: None = Depends(csrf_dependency),
+) -> dict[str, bool]:
+    return {"ok": True}
+
+
+app = create_app(
+    title="Apyra Cookie-Auth API",
+    routers=[router],
+    settings=Settings(api_prefix=""),
+)
+"""
+
+_COOKIE_AUTH_README = """# {name}
+
+Cookie-auth integration starter for Apyra.
+
+## Configuration
+
+- Set `APYRA_CSRF_SECRET` to a random secret with at least 32 UTF-8 bytes.
+- Configure `AUTH_JWKS_URL`, `AUTH_ISSUER`, and `AUTH_AUDIENCE` for the identity provider
+  whose validated access token is sent in the `access_token` cookie.
+- The provider or your login integration must issue that cookie with appropriate `Secure`,
+  `HttpOnly`, and `SameSite` attributes. This starter does not implement login or token issuance.
+- `GET /csrf` returns a signed CSRF token and sets a script-readable `csrf_token` cookie.
+  Send its value in the `X-CSRF-Token` header for unsafe requests such as `POST /write`.
+- `APYRA_COOKIE_SECURE` defaults to `true`. Set it to `false` only for local HTTP development;
+  never disable `Secure` in production.
+
+CSRF does not replace Origin checks. Configure your own Origin policy and use HTTPS in deployed
+environments. Cross-origin cookie authentication requires an explicit application CORS and cookie
+policy.
+"""
+
+
+def _project_name(value: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*", value):
+        raise argparse.ArgumentTypeError(
+            "project name must use alphanumeric segments separated by '.', '_' or '-'"
+        )
+    return value
+
+
+def _generator_name(value: str) -> str:
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value) or keyword.iskeyword(value):
+        raise argparse.ArgumentTypeError("generator name must be a valid Python identifier")
+    return value
 
 
 def _write(path: Path, content: str, *, force: bool = False) -> None:
@@ -13,7 +106,7 @@ def _write(path: Path, content: str, *, force: bool = False) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _new_project(name: str, *, force: bool = False) -> None:
+def _new_project(name: str, *, force: bool = False, template: str = "minimal") -> None:
     root = Path(name)
     if root.exists() and not force:
         raise FileExistsError(f"project directory already exists: {root}")
@@ -27,9 +120,11 @@ dependencies = ["apyra-fastapi>=0.1.0,<0.2.0"]
 ''',
         force=force,
     )
-    _write(
-        root / "main.py",
-        """from fastapi import APIRouter
+    if template == "cookie-auth":
+        main_content = _COOKIE_AUTH_MAIN
+        readme_content = _COOKIE_AUTH_README.format(name=name)
+    else:
+        main_content = """from fastapi import APIRouter
 
 from apyra.core import Settings
 from apyra.fastapi import create_app
@@ -43,10 +138,10 @@ async def health() -> dict[str, str]:
 
 
 app = create_app(title="Apyra API", routers=[router], settings=Settings(api_prefix="/api"))
-""",
-        force=force,
-    )
-    _write(root / "README.md", f"# {name}\n", force=force)
+"""
+        readme_content = f"# {name}\n"
+    _write(root / "main.py", main_content, force=force)
+    _write(root / "README.md", readme_content, force=force)
 
 
 def _snake(name: str) -> str:
@@ -175,17 +270,35 @@ def _generate_repository(name: str, *, force: bool = False) -> None:
 
 from __future__ import annotations
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from apyra.db import Repository
+from models.{file_name} import {class_name}
 
 
-class {class_name}Repository(Repository):
-    pass
+class {class_name}Repository(Repository[{class_name}]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, {class_name})
 ''',
         force=force,
     )
 
 
 def _generate_crud(name: str, *, force: bool = False) -> None:
+    if not force:
+        file_name = _snake(name)
+        service_name = name.removesuffix("Service") if name.endswith("Service") else name
+        paths = (
+            Path("models") / f"{file_name}.py",
+            Path("schemas") / f"{file_name}.py",
+            Path("repositories") / f"{file_name}.py",
+            Path("services") / f"{_snake(service_name)}.py",
+            Path("routers") / f"{file_name}.py",
+        )
+        existing = next((path for path in paths if path.exists()), None)
+        if existing is not None:
+            raise FileExistsError(f"refusing to overwrite existing file: {existing}")
+
     _generate_model(name, force=force)
     _generate_schema(name, force=force)
     _generate_repository(name, force=force)
@@ -194,18 +307,20 @@ def _generate_crud(name: str, *, force: bool = False) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse CLI arguments, run the selected command, and return its exit status."""
     parser = argparse.ArgumentParser(prog="apyra")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     new_parser = subparsers.add_parser("new")
-    new_parser.add_argument("name")
+    new_parser.add_argument("name", type=_project_name)
     new_parser.add_argument("--force", action="store_true")
+    new_parser.add_argument("--template", choices=("minimal", "cookie-auth"), default="minimal")
 
     generate_parser = subparsers.add_parser("generate")
     generate_subparsers = generate_parser.add_subparsers(dest="target", required=True)
     for target_name in ("module", "model", "router", "service", "schema", "repository", "crud"):
         target_parser = generate_subparsers.add_parser(target_name)
-        target_parser.add_argument("name")
+        target_parser.add_argument("name", type=_generator_name)
         target_parser.add_argument("--force", action="store_true")
         target_parser.add_argument("--dry-run", action="store_true")
 
@@ -221,7 +336,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "new":
-        _new_project(args.name, force=args.force)
+        _new_project(args.name, force=args.force, template=args.template)
         print(f"created project {args.name}")
         return 0
     if args.command == "generate":
@@ -248,12 +363,7 @@ def main(argv: list[str] | None = None) -> int:
         print(args.message)
         return 0
     if args.command == "db":
-        if args.db_command == "revision":
-            print(f"revision: {args.message}")
-            return 0
-        if args.db_command == "upgrade":
-            print("upgrade requested")
-            return 0
+        parser.error("database migration commands are not implemented")
     return 0
 
 
