@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add error and performance monitoring primitives to `apyra-observability`, including bounded in-memory reporters, capture helpers, context managers/decorators, aggregated timing statistics, and manual timers.
+- Add FastAPI error and performance monitoring middleware, registration helpers, and opt-in `create_app` flags (`error_monitoring`, `performance_monitoring`).
+
 - Require configured expected issuer and audience values when JWT claim verification is enabled.
 - Include configured issuer and audience claims in tokens issued by `TokenService` and enforce them
   during refresh, revocation, and access-token verification.

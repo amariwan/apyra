@@ -1,7 +1,7 @@
 [project]
 name = "apyra-observability"
 version = "0.1.0"
-description = "Logging and observability primitives for Apyra."
+description = "Logging, error, and performance monitoring primitives for Apyra."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -16,6 +16,13 @@ from starlette.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from .monitoring import (
+    ErrorMonitoringConfig,
+    ErrorMonitoringMiddleware,
+    PerformanceMonitoringConfig,
+    PerformanceMonitoringMiddleware,
+)
+
 StartupHook = Callable[[FastAPI], Awaitable[None] | None]
 ShutdownHook = Callable[[FastAPI], Awaitable[None] | None]
 
@@ -107,6 +114,9 @@ def create_app(
     rate_limit_enabled: bool = False,
     rate_limit_max_requests: int = 100,
     rate_limit_window_seconds: int = 60,
+    error_monitoring: bool | ErrorMonitoringConfig = False,
+    performance_monitoring: bool | PerformanceMonitoringConfig = False,
+    monitoring_reraise: bool = True,
 ) -> FastAPI:
     """Create a FastAPI application with Apyra defaults.
 
@@ -175,6 +185,16 @@ def create_app(
             max_requests=rate_limit_max_requests,
             window_seconds=rate_limit_window_seconds,
         )
+
+    if isinstance(performance_monitoring, PerformanceMonitoringConfig):
+        app.add_middleware(PerformanceMonitoringMiddleware, config=performance_monitoring)
+    elif performance_monitoring:
+        app.add_middleware(PerformanceMonitoringMiddleware)
+
+    if isinstance(error_monitoring, ErrorMonitoringConfig):
+        app.add_middleware(ErrorMonitoringMiddleware, config=error_monitoring)
+    elif error_monitoring:
+        app.add_middleware(ErrorMonitoringMiddleware, reraise=monitoring_reraise)
 
     if health_path:
         normalized_health_path = health_path if health_path.startswith("/") else f"/{health_path}"

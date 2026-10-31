@@ -6,10 +6,23 @@ from .app import create_app
 from .auth import get_current_token, get_current_user, require_roles, require_scopes
 from .cbv import cbv, delete, get, patch, post, put
 from .csrf import require_csrf
+from .monitoring import (
+    ErrorMonitoringConfig,
+    ErrorMonitoringMiddleware,
+    PerformanceMonitoringConfig,
+    PerformanceMonitoringMiddleware,
+    register_error_monitoring_middleware,
+    register_monitoring_middleware,
+    register_performance_monitoring_middleware,
+)
 from .openapi import set_operation_ids, simplify_operation_ids
 from .timing import TimingMiddleware, register_timing_middleware
 
 __all__ = [
+    "ErrorMonitoringConfig",
+    "ErrorMonitoringMiddleware",
+    "PerformanceMonitoringConfig",
+    "PerformanceMonitoringMiddleware",
     "TimingMiddleware",
     "cbv",
     "create_app",
@@ -20,6 +33,9 @@ __all__ = [
     "patch",
     "post",
     "put",
+    "register_error_monitoring_middleware",
+    "register_monitoring_middleware",
+    "register_performance_monitoring_middleware",
     "register_timing_middleware",
     "require_csrf",
     "require_roles",

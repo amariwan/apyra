@@ -33,6 +33,8 @@ app = create_app(title="My API", routers=[router], settings=Settings(api_prefix=
 - `get_current_token`, `get_current_user`, `require_roles`, `require_scopes`
 - `cbv`, `get`, `post`, `put`, `patch`, `delete` — class-based views
 - `TimingMiddleware`, `register_timing_middleware`
+- `ErrorMonitoringMiddleware`, `PerformanceMonitoringMiddleware`
+- `register_error_monitoring_middleware`, `register_performance_monitoring_middleware`
 - `set_operation_ids`, `simplify_operation_ids`
 
 ## Rate limiting

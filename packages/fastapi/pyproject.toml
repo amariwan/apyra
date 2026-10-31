@@ -10,6 +10,7 @@ dependencies = [
     "apyra-core>=0.1.0,<0.2.0",
     "apyra-auth>=0.1.0,<0.2.0",
     "apyra-security>=0.1.0,<0.2.0",
+    "apyra-observability>=0.1.0,<0.2.0",
     "fastapi>=0.115.0",
     "starlette",
 ]
@@ -18,6 +19,7 @@ dependencies = [
 apyra-core = { workspace = true }
 apyra-auth = { workspace = true }
 apyra-security = { workspace = true }
+apyra-observability = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]

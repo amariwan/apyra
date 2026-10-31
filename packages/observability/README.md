@@ -1,6 +1,6 @@
 # apyra-observability
 
-Logging and observability primitives for Apyra.
+Logging, error, and performance monitoring primitives for Apyra.
 
 ## Installation
 

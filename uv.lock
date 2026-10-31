@@ -632,6 +632,7 @@ source = { editable = "packages/fastapi" }
 dependencies = [
     { name = "apyra-auth" },
     { name = "apyra-core" },
+    { name = "apyra-observability" },
     { name = "apyra-security" },
     { name = "fastapi" },
     { name = "starlette" },
@@ -641,6 +642,7 @@ dependencies = [
 requires-dist = [
     { name = "apyra-auth", editable = "packages/auth" },
     { name = "apyra-core", editable = "packages/core" },
+    { name = "apyra-observability", editable = "packages/observability" },
     { name = "apyra-security", editable = "packages/security" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "starlette" },

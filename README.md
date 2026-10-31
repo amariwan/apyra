@@ -46,7 +46,7 @@ FastAPI already provides routing, dependency injection, and OpenAPI. Apyra is **
 | `apyra-storage` | Storage contracts, filesystem/S3 backends |
 | `apyra-cache` | Cache contracts, adapters, decorators |
 | `apyra-ai` | OpenAI-compatible AI client |
-| `apyra-observability` | Logging and observability primitives |
+| `apyra-observability` | Logging, error, and performance monitoring primitives |
 | `apyra-email` | Email delivery primitives and providers |
 | `apyra-channels` | Realtime channel primitives and pub/sub |
 | `apyra-i18n` | Internationalization primitives |

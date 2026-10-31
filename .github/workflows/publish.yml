@@ -49,6 +49,7 @@ jobs:
 
   build:
     needs: quality
+    if: github.repository == 'amariwan/apyra'
     outputs:
       version: ${{ steps.version.outputs.version }}
     runs-on: ubuntu-latest
@@ -108,12 +109,15 @@ jobs:
                   + ", ".join(mismatches)
               )
 
-          # Keep the metapackage's core dependency aligned with the release.
           meta = tomllib.loads(Path("packages/meta/pyproject.toml").read_text(encoding="utf-8"))
           core_dependency = meta["project"]["dependencies"][0]
-          if core_dependency != f"apyra-core>={expected},<{expected.split('.')[0]}.{int(expected.split('.')[1]) + 1}.0":
-              # Allow the existing compatible range style used by the repository.
-              pass
+          expected_range = (
+              f"apyra-core>={expected},<{expected.split('.')[0]}.{int(expected.split('.')[1]) + 1}.0"
+          )
+          if core_dependency != expected_range:
+              raise SystemExit(
+                  f"Metapackage core dependency {core_dependency!r} does not match {expected_range!r}"
+              )
 
           print(f"Validated {len(manifests)} distributions at version {expected}")
           PY
@@ -134,6 +138,7 @@ jobs:
 
   validate:
     needs: build
+    if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -151,6 +156,7 @@ jobs:
 
   publish-core:
     needs: validate
+    if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
     environment: pypi-core
     permissions:
@@ -164,13 +170,14 @@ jobs:
         run: |
           mkdir -p publish
           cp dist/apyra_core-* publish/
-      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
+      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
           attestations: true
 
   verify-core:
     needs: publish-core
+    if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -217,6 +224,7 @@ jobs:
 
   publish-fastapi:
     needs: verify-core
+    if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
     environment: pypi-fastapi
     permissions:
@@ -230,13 +238,14 @@ jobs:
         run: |
           mkdir -p publish
           cp dist/apyra_fastapi-* publish/
-      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
+      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
           attestations: true
 
   publish-packages:
     needs: verify-core
+    if: github.repository == 'amariwan/apyra'
     strategy:
       fail-fast: false
       matrix:
@@ -270,13 +279,14 @@ jobs:
           mkdir -p publish
           normalized="${PACKAGE//-/_}"
           cp "dist/apyra_${normalized}-"* publish/
-      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
+      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
           attestations: true
 
   publish-meta:
     needs:
+    if: github.repository == 'amariwan/apyra'
       - publish-fastapi
       - publish-packages
     runs-on: ubuntu-latest
@@ -293,13 +303,14 @@ jobs:
           mkdir -p publish
           find dist -maxdepth 1 -type f \( -name 'apyra-[0-9]*.whl' -o -name 'apyra-[0-9]*.tar.gz' \) -exec cp {} publish/ \;
           test -n "$(find publish -type f -print -quit)"
-      - uses: pypa/gh-action-pypi-publish@1f5d4ec244f65dce93685ee3e98e77123f090866 # v1.12.1
+      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
         with:
           packages-dir: publish
           attestations: true
 
   smoke-test:
     needs:
+    if: github.repository == 'amariwan/apyra'
       - publish-fastapi
       - publish-packages
       - publish-meta
