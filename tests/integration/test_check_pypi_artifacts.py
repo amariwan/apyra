@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import importlib.util
 import io
 import json
@@ -109,7 +110,7 @@ def test_fails_for_changed_published_artifact(
 
 def test_published_digests_returns_none_on_404(monkeypatch: pytest.MonkeyPatch) -> None:
     def raise_404(*args, **kwargs):
-        raise HTTPError("url", 404, "not found", {}, None)
+        raise HTTPError("url", 404, "not found", http.client.HTTPMessage(), None)
 
     monkeypatch.setattr("urllib.request.urlopen", raise_404)
     assert checker.published_digests("example", "1.0.0") is None
