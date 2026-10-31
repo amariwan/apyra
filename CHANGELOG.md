@@ -13,6 +13,7 @@
 - Incomplete custom `EventBus` subclasses remain temporarily instantiable with a
   `DeprecationWarning`; implement both `publish()` and `subscribe()` before the next major
   `apyra-events` release.
+- Repair release workflow dependency graph, version propagation, tag glob, manual dispatch guard, recovery-friendly publishing, and add automated workflow validation tests.
 - `apyra new <name> --template cookie-auth` generates an opt-in cookie-auth integration starter
   with CSRF protection on unsafe routes; the default minimal starter is unchanged.
 

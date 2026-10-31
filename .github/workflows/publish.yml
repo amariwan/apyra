@@ -3,13 +3,18 @@ name: publish
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
         description: "Release version without leading v"
         required: true
         type: string
+      publish:
+        description: "Publish packages to PyPI (manual runs default to a dry validation build)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -155,8 +160,10 @@ jobs:
       - run: uv run --no-project --python 3.12 scripts/validate_release.py --dist dist
 
   publish-core:
-    needs: validate
-    if: github.repository == 'amariwan/apyra'
+    needs: [validate, build]
+    if: >-
+      github.repository == 'amariwan/apyra' &&
+      (github.event_name != 'workflow_dispatch' || inputs.publish == true)
     runs-on: ubuntu-latest
     environment: pypi-core
     permissions:
@@ -174,9 +181,10 @@ jobs:
         with:
           packages-dir: publish
           attestations: true
+          skip-existing: true
 
   verify-core:
-    needs: publish-core
+    needs: [publish-core, build]
     if: github.repository == 'amariwan/apyra'
     runs-on: ubuntu-latest
     permissions:
@@ -189,12 +197,8 @@ jobs:
         run: |
           version="${RELEASE_VERSION}"
           if [ -z "${version}" ]; then
-            # Fall back to the tag or dispatch input when output propagation is unavailable.
-            if [ "${{ github.ref_type }}" = "tag" ]; then
-              version="${{ github.ref_name#v }}"
-            else
-              version="${{ inputs.version }}"
-            fi
+            echo "Release version is unavailable" >&2
+            exit 1
           fi
           for attempt in $(seq 1 30); do
             if curl -fsS "https://pypi.org/pypi/apyra-core/${version}/json" >/dev/null; then
@@ -211,41 +215,15 @@ jobs:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           version="${RELEASE_VERSION}"
-          if [ -z "${version}" ]; then
-            if [ "${{ github.ref_type }}" = "tag" ]; then
-              version="${{ github.ref_name#v }}"
-            else
-              version="${{ inputs.version }}"
-            fi
-          fi
           uv venv /tmp/apyra-core-check
           uv pip install --python /tmp/apyra-core-check/bin/python "apyra-core==${version}"
           /tmp/apyra-core-check/bin/python -c "import apyra.core; print('apyra.core import ok')"
 
-  publish-fastapi:
-    needs: verify-core
-    if: github.repository == 'amariwan/apyra'
-    runs-on: ubuntu-latest
-    environment: pypi-fastapi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: release-distributions
-          path: dist
-      - name: Stage FastAPI distribution
-        run: |
-          mkdir -p publish
-          cp dist/apyra_fastapi-* publish/
-      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
-        with:
-          packages-dir: publish
-          attestations: true
-
-  publish-packages:
-    needs: verify-core
-    if: github.repository == 'amariwan/apyra'
+  publish-leaf:
+    needs: [verify-core, build]
+    if: >-
+      github.repository == 'amariwan/apyra' &&
+      (github.event_name != 'workflow_dispatch' || inputs.publish == true)
     strategy:
       fail-fast: false
       matrix:
@@ -283,12 +261,108 @@ jobs:
         with:
           packages-dir: publish
           attestations: true
+          skip-existing: true
+
+  verify-packages:
+    needs: [publish-leaf, build]
+    if: github.repository == 'amariwan/apyra'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+      - name: Wait for leaf packages on PyPI
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          version="${RELEASE_VERSION}"
+          if [ -z "${version}" ]; then
+            echo "Release version is unavailable" >&2
+            exit 1
+          fi
+          for package in ai auth cache channels cli db email events i18n observability security storage tasks; do
+            pypi_name="apyra-${package}"
+            available=0
+            for attempt in $(seq 1 30); do
+              if curl -fsS "https://pypi.org/pypi/${pypi_name}/${version}/json" >/dev/null; then
+                available=1
+                break
+              fi
+              echo "Waiting for ${pypi_name} ${version} (attempt ${attempt}/30)"
+              sleep 10
+            done
+            if [ "${available}" != "1" ]; then
+              echo "${pypi_name} ${version} was not found on PyPI" >&2
+              exit 1
+            fi
+            echo "${pypi_name} ${version} is available on PyPI"
+          done
+
+  publish-fastapi:
+    needs: [verify-packages, build]
+    if: >-
+      github.repository == 'amariwan/apyra' &&
+      (github.event_name != 'workflow_dispatch' || inputs.publish == true)
+    runs-on: ubuntu-latest
+    environment: pypi-fastapi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-distributions
+          path: dist
+      - name: Stage FastAPI distribution
+        run: |
+          mkdir -p publish
+          cp dist/apyra_fastapi-* publish/
+      - uses: pypa/gh-action-pypi-publish@release/v1  # v1.12.1, SHA 1f5d4ec244f65dce93685ee3e98e77123f090866
+        with:
+          packages-dir: publish
+          attestations: true
+          skip-existing: true
+
+  verify-fastapi:
+    needs: [publish-fastapi, build]
+    if: github.repository == 'amariwan/apyra'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
+      - name: Wait for apyra-fastapi on PyPI
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          version="${RELEASE_VERSION}"
+          if [ -z "${version}" ]; then
+            echo "Release version is unavailable" >&2
+            exit 1
+          fi
+          for attempt in $(seq 1 30); do
+            if curl -fsS "https://pypi.org/pypi/apyra-fastapi/${version}/json" >/dev/null; then
+              echo "apyra-fastapi ${version} is available on PyPI"
+              exit 0
+            fi
+            echo "Waiting for apyra-fastapi ${version} (attempt ${attempt}/30)"
+            sleep 10
+          done
+          echo "apyra-fastapi ${version} was not found on PyPI" >&2
+          exit 1
+      - name: Install and import apyra-fastapi from PyPI
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          version="${RELEASE_VERSION}"
+          uv venv /tmp/apyra-fastapi-check
+          uv pip install --python /tmp/apyra-fastapi-check/bin/python "apyra-fastapi==${version}"
+          /tmp/apyra-fastapi-check/bin/python -c "import apyra.fastapi; print('apyra.fastapi import ok')"
 
   publish-meta:
-    needs:
-    if: github.repository == 'amariwan/apyra'
-      - publish-fastapi
-      - publish-packages
+    needs: [verify-fastapi, verify-packages, build]
+    if: >-
+      github.repository == 'amariwan/apyra' &&
+      (github.event_name != 'workflow_dispatch' || inputs.publish == true)
     runs-on: ubuntu-latest
     environment: pypi-meta
     permissions:
@@ -307,13 +381,11 @@ jobs:
         with:
           packages-dir: publish
           attestations: true
+          skip-existing: true
 
   smoke-test:
-    needs:
+    needs: [publish-meta, build]
     if: github.repository == 'amariwan/apyra'
-      - publish-fastapi
-      - publish-packages
-      - publish-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -321,22 +393,32 @@ jobs:
       - uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
       - name: Determine release version
         id: version
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "version=${{ github.ref_name#v }}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "version=${{ inputs.version }}" >> "${GITHUB_OUTPUT}"
+          version="${RELEASE_VERSION}"
+          if [ -z "${version}" ]; then
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              version="${{ github.ref_name }}"
+              version="${version#v}"
+            else
+              version="${{ inputs.version }}"
+            fi
           fi
+          if [ -z "${version}" ]; then
+            echo "Could not determine release version" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
       - name: Install from PyPI and run smoke test
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           uv venv /tmp/apyra-pypi-smoke
-          uv pip install --python /tmp/apyra-pypi-smoke/bin/python "apyra-fastapi==${RELEASE_VERSION}"
+          uv pip install --python /tmp/apyra-pypi-smoke/bin/python "apyra[all]==${RELEASE_VERSION}"
           /tmp/apyra-pypi-smoke/bin/python - <<'PY'
           import importlib
 
-          import fastapi
           from fastapi.testclient import TestClient
 
           from apyra.fastapi import create_app
