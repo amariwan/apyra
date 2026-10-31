@@ -6,7 +6,11 @@ from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
 
-class ChannelSubscription(AsyncIterator[Any], Protocol):
+class ChannelSubscription(Protocol):
+    def __aiter__(self) -> AsyncIterator[Any]: ...
+
+    async def __anext__(self) -> Any: ...
+
     async def close(self) -> None: ...
 
 
