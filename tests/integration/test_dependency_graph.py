@@ -40,24 +40,28 @@ def _topological_order(projects: dict[str, set[str]]) -> list[str]:
 
 def test_all_sixteen_distributions_are_present() -> None:
     projects = _load_projects()
-    assert len(projects) == 16
+    assert len(projects) == 20
     expected = {
         "apyra",
         "apyra-ai",
+        "apyra-application",
         "apyra-auth",
         "apyra-cache",
         "apyra-channels",
         "apyra-cli",
         "apyra-core",
         "apyra-db",
+        "apyra-domain",
         "apyra-email",
         "apyra-events",
         "apyra-fastapi",
         "apyra-i18n",
+        "apyra-messaging",
         "apyra-observability",
         "apyra-security",
         "apyra-storage",
         "apyra-tasks",
+        "apyra-workflow",
     }
     assert set(projects) == expected
 

@@ -11,10 +11,22 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-opentelemetry = ["opentelemetry-api>=1.25.0"]
+opentelemetry = [
+    "opentelemetry-api>=1.25.0",
+    "opentelemetry-sdk>=1.25.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.25.0",
+    "opentelemetry-instrumentation-fastapi>=0.46b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
+]
 
 [tool.uv.sources]
 apyra-core = { workspace = true }
+
+[project.urls]
+Homepage = "https://github.com/amariwan/apyra"
+Repository = "https://github.com/amariwan/apyra"
+Issues = "https://github.com/amariwan/apyra/issues"
+Documentation = "https://github.com/amariwan/apyra/tree/main/docs"
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]

@@ -12,7 +12,14 @@ dependencies = [
 
 [project.optional-dependencies]
 celery = ["celery>=5.5.0"]
+scheduler = ["apscheduler>=3.11.0"]
 taskiq = ["taskiq>=0.11.0"]
+
+[project.urls]
+Homepage = "https://github.com/amariwan/apyra"
+Repository = "https://github.com/amariwan/apyra"
+Issues = "https://github.com/amariwan/apyra/issues"
+Documentation = "https://github.com/amariwan/apyra/tree/main/docs"
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]

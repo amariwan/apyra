@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from runpy import run_path
 from typing import cast
@@ -57,3 +59,35 @@ def test_release_validator_rejects_duplicate_versions(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Expected exactly one .whl artifact for apyra-core" in result.stderr
     assert "found 2" in result.stderr
+
+
+def test_generated_quickstarts_validate_real_http_and_authentication(tmp_path: Path) -> None:
+    namespace = run_path(str(SCRIPT))
+    assert "validate_generated_quickstarts" in namespace
+    validate_generated_quickstarts = cast(
+        Callable[[Path, Path, Path], None], namespace["validate_generated_quickstarts"]
+    )
+    cli = shutil.which("apyra")
+    assert cli is not None, "the workspace apyra CLI must be installed"
+
+    validate_generated_quickstarts(Path(sys.executable), Path(cli), tmp_path)
+
+    assert (tmp_path / "minimal-api" / "main.py").is_file()
+    assert (tmp_path / "cookie-auth-api" / "main.py").is_file()
+
+
+def test_generated_templates_validate_real_http() -> None:
+    namespace = run_path(str(SCRIPT))
+    assert "validate_generated_templates" in namespace
+    validate_generated_templates = cast(
+        Callable[[Path, Path, Path], None], namespace["validate_generated_templates"]
+    )
+    cli = shutil.which("apyra")
+    assert cli is not None, "the workspace apyra CLI must be installed"
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="apyra-template-validate-") as temp_dir:
+        validate_generated_templates(Path(sys.executable), Path(cli), Path(temp_dir))
+
+    # files are removed with temp dir; just ensure function completed

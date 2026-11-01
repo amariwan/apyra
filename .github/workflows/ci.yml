@@ -39,7 +39,9 @@ jobs:
               - 'packages/**'
               - 'tests/**'
               - 'examples/**'
+              - 'docs/**'
               - 'scripts/**'
+              - 'mkdocs.yml'
               - 'pyproject.toml'
               - 'uv.lock'
               - 'Justfile'
@@ -157,7 +159,7 @@ jobs:
           python-version: "3.12"
       - name: Build distributions
         run: |
-          for package in core fastapi storage db auth cache ai observability email channels i18n events security tasks cli; do
+          for package in application core domain fastapi storage db auth cache ai observability email channels i18n events messaging security tasks cli workflow; do
             uv build --package "apyra-${package}"
           done
           uv build --package apyra
@@ -246,8 +248,9 @@ jobs:
           from importlib.resources import files
 
           modules = (
-              "ai", "auth", "cache", "channels", "cli", "core", "db", "email",
-              "events", "fastapi", "i18n", "observability", "security", "storage", "tasks",
+              "ai", "application", "auth", "cache", "channels", "cli", "core", "db", "domain",
+              "email", "events", "fastapi", "i18n", "messaging", "observability", "security",
+              "storage", "tasks", "workflow",
           )
           for name in modules:
               module = importlib.import_module(f"apyra.{name}")

@@ -1,0 +1,3 @@
+# `apyra.core`
+
+::: apyra.core

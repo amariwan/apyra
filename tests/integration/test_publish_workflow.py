@@ -145,20 +145,26 @@ def test_release_builds_all_distributions() -> None:
     matrix_packages = jobs["publish-leaf"]["strategy"]["matrix"]["package"]
     expected_leaf = {
         "ai",
+        "application",
         "auth",
         "cache",
         "channels",
         "cli",
         "db",
+        "domain",
         "email",
         "events",
         "i18n",
+        "messaging",
         "observability",
         "security",
         "storage",
         "tasks",
+        "workflow",
     }
     assert set(matrix_packages) == expected_leaf
-    assert "for package in core fastapi storage db auth cache ai" in text
-    assert "observability email channels i18n events security tasks cli; do" in text
+    assert "for package in application core domain fastapi" in text
+    assert (
+        "observability email channels i18n events messaging security tasks cli workflow; do" in text
+    )
     assert "uv build --package apyra" in text

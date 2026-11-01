@@ -1,50 +1,57 @@
 # apyra-cache
 
-Cache contracts, adapters, and decorators for Apyra.
+Cache contracts and adapters for Apyra.
+
+## Purpose
+
+`apyra-cache` provides cache contracts, adapters (memory, Redis, Memcached), a `@cached` decorator, and factory helpers. Backends are optional extras.
 
 ## Installation
 
 ```bash
-uv add apyra-cache
-uv add 'apyra-cache[redis]'     # Redis backend
-uv add 'apyra-cache[memcached]' # Memcached backend
+uv add apyra-cache                      # memory backend
+uv add "apyra-cache[redis]"             # + Redis
+uv add "apyra-cache[memcached]"        # + Memcached
 ```
 
-## Quick usage
+## Minimal usage
 
 ```python
 from apyra.cache import cached
 
 
-@cached(ttl_seconds=60)
-async def get_user(user_id: str) -> dict:
-    return {"id": user_id}
+@cached(ttl=60)
+async def get_value(key: str) -> str: ...
 ```
 
-## Key exports
+## Optional dependencies
 
-- `cached` — async cache decorator
-- `AsyncCache`, `MemoryAsyncCache`, `MemoryTTLCache`
-- `RedisCache`, `MemcachedCache`
-- `get_cache`, `close_cache`, `get_cache_settings`
+- `redis`: `redis>=5.0.0`
+- `memcached`: `pymemcache>=4.0.0`
 
-Set `CacheSettings(cache_enabled=False)` to make cache operations no-ops without initializing the
-selected backend.
+## Configuration
 
-The default decorator key includes the function name and a SHA-256 digest of the normalized
-argument representation instead of argument values in plaintext. This is not a keyed digest: do
-not cache functions that accept passwords or other low-entropy secrets with the default key,
-because an attacker with access to backend keys could test guesses offline. Avoid caching those
-functions or provide an application-managed keyed cache key that preserves all
-result-distinguishing inputs.
+`CacheSettings` / `CacheBackend` via Pydantic Settings (`apyra.cache.settings`).
 
-## Memcached scope
+## Public API
 
-`MemcachedCache.clear()` uses Memcached's server-wide `flush_all`, so it invalidates keys outside
-the configured key prefix too. This operation is disabled by default. Enable it only for a
-dedicated Memcached server with `CACHE_MEMCACHED_ALLOW_SERVER_FLUSH=true`; calling `clear()` without
-that explicit setting raises `RuntimeError`. Avoid enabling it when unrelated applications share
-the server.
+- `AsyncCache`, `MemoryAsyncCache`, `MemoryTTLCache`, `RedisCache`, `MemcachedCache`
+- `RedisClient`, `MemcachedClient`
+- `cached`, `get_cache`, `close_cache`
+- `CacheSettings`, `CacheBackend`, `get_cache_settings`
+- `JSONValue`
+
+## Error behavior
+
+Cache backend errors propagate from the underlying client. Configuration errors raise during factory resolution.
+
+## Integration
+
+Use `get_cache()`/`close_cache()` in application lifespan. Combine with `apyra-fastapi` for request caching.
+
+## Compatibility
+
+- Python ≥ 3.12
 
 ## License
 

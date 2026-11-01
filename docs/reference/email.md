@@ -1,0 +1,3 @@
+# `apyra.email`
+
+::: apyra.email

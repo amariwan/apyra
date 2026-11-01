@@ -1,13 +1,10 @@
 # apyra-security
 
-Security primitives for Apyra (constant-time comparison, secret redaction,
-password hashing, API keys, CSRF).
+Security primitives for Apyra.
 
-Password hashes use salted PBKDF2-HMAC-SHA256 with 600,000 iterations. The
-verifier continues to accept legacy three-part hashes made with 390,000
-iterations. After a successful `verify_password`, call
-`password_hash_needs_rehash`; when it returns `True`, replace the stored value
-with `hash_password(password)` to upgrade it.
+## Purpose
+
+`apyra-security` provides password hashing, API key generation/verification, CSRF token generation/verification, constant-time comparison, and redaction helpers.
 
 ## Installation
 
@@ -15,22 +12,43 @@ with `hash_password(password)` to upgrade it.
 uv add apyra-security
 ```
 
-CSRF helpers require a random secret of at least 32 UTF-8 bytes. Generate and
-store one in application configuration, for example with
-`secrets.token_urlsafe(32)`; do not use an empty, short, or hard-coded value.
-
-For cookie-authenticated requests, bind tokens to an application-validated
-session value when generating and verifying them:
+## Minimal usage
 
 ```python
-token = generate_csrf_token(secret, binding=session.id)
-valid = verify_csrf_token(submitted_token, secret, binding=session.id)
+from apyra.security import hash_password, verify_password
+
+hashed = hash_password("secret")
+assert verify_password("secret", hashed)
 ```
 
-The binding must be stable for the session and unavailable to an attacker in a
-different session. Omitting it preserves the legacy token format, which is not
-session-bound by itself; store and compare an expected token per session if a
-binding value is unavailable. These helpers do not validate request origins.
+## Optional dependencies
+
+None.
+
+## Configuration
+
+No central settings; functions accept explicit parameters.
+
+## Public API
+
+- `hash_password`, `verify_password`, `password_hash_needs_rehash`
+- `generate_api_key`, `verify_api_key`
+- `generate_csrf_token`, `verify_csrf_token`
+- `constant_time_compare`
+- `redact_mapping`
+
+## Error behavior
+
+Verification functions return booleans rather than raising on mismatch. Invalid inputs raise `ValueError`/`TypeError`.
+
+## Integration
+
+Used by `apyra-fastapi` (CSRF dependency) and application code.
+
+## Compatibility
+
+- Python ≥ 3.12
+- Depends on `apyra-core>=0.1.0,<0.2.0`
 
 ## License
 

@@ -1,0 +1,3 @@
+# `apyra.cli`
+
+::: apyra.cli

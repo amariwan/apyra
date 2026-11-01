@@ -13,6 +13,7 @@ __pycache__/
 # Build / packaging
 dist/
 build/
+site/
 *.egg-info/
 *.egg
 *.whl
@@ -55,3 +56,7 @@ Thumbs.db
 
 # uv
 .uv/
+
+# Runtime artifacts
+*.rdb
+*.db

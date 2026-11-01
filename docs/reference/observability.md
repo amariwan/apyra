@@ -1,0 +1,3 @@
+# `apyra.observability`
+
+::: apyra.observability

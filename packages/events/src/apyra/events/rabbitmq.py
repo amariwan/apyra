@@ -9,9 +9,11 @@ import logging
 from collections import defaultdict
 from typing import Any, cast
 
-_aio_pika: Any
+_aio_pika: Any = None
 try:  # pragma: no cover - exercised only when the optional dependency is installed
-    import aio_pika as _aio_pika
+    import aio_pika as _imported_aio_pika
+
+    _aio_pika = _imported_aio_pika
 except ImportError:  # pragma: no cover - optional dependency
     _aio_pika = None
 

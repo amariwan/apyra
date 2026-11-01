@@ -1,20 +1,57 @@
 # apyra-tasks
 
-Background task primitives and adapters for Apyra.
+Background task primitives for Apyra.
+
+## Purpose
+
+`apyra-tasks` provides task definitions, a task runner, Celery/Taskiq adapters, and an APScheduler-based persistent scheduler with optional extras.
 
 ## Installation
 
 ```bash
-uv add apyra-tasks
-uv add 'apyra-tasks[celery]' # Celery adapter
-uv add 'apyra-tasks[taskiq]' # Taskiq adapter
+uv add apyra-tasks                  # core
+uv add "apyra-tasks[celery]"        # + Celery
+uv add "apyra-tasks[taskiq]"        # + Taskiq
+uv add "apyra-tasks[scheduler]"     # + APScheduler
 ```
 
-`repeat_every` preserves its original `None` return by default. Set `return_task_handle=True` to receive a cancellable `asyncio.Task` when the decorated starter is awaited; keep and cancel/await that handle during application shutdown so periodic work has an explicit lifecycle.
+## Minimal usage
 
-Synchronous tasks and synchronous `on_exception`/`on_complete` callbacks run in a worker thread; async callbacks run on the event loop.
+```python
+from apyra.tasks import Task, TaskRunner
 
-Cancelling the task stops future repetitions but cannot interrupt a synchronous callback already running in its worker thread. That callback can continue after the task handle finishes. Use a cooperative stop signal, such as a captured `threading.Event`, and wait for the callback to finish before closing resources it uses.
+runner = TaskRunner()
+```
+
+## Optional dependencies
+
+- `celery`: `celery>=5.5.0`
+- `taskiq`: `taskiq>=0.11.0`
+- `scheduler`: `apscheduler>=3.11.0`
+
+## Configuration
+
+Scheduler persistence uses `apyra-db`. Adapter availability depends on installed extras.
+
+## Public API
+
+- `Task`, `TaskResult`, `TaskRunner`
+- `CeleryAdapter`, `CeleryUnavailableError`
+- `TaskiqAdapter`, `TaskiqUnavailableError`
+- `ApyraScheduler`, `repeat_every`
+
+## Error behavior
+
+Missing optional adapters raise `*UnavailableError`. Task failures propagate from the runner.
+
+## Integration
+
+Combine with `apyra-db` for persistent scheduling and `apyra-fastapi` for triggering tasks.
+
+## Compatibility
+
+- Python ≥ 3.12
+- Scheduler integration tests require PostgreSQL
 
 ## License
 
