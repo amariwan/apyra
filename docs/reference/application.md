@@ -1,0 +1,3 @@
+# `apyra.application`
+
+::: apyra.application

@@ -1,0 +1,50 @@
+[project]
+name = "apyra-enterprise-reference"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "apyra-fastapi>=0.1.0,<0.2.0",
+    "apyra-application>=0.1.0,<0.2.0",
+    "apyra-domain>=0.1.0,<0.2.0",
+    "apyra-observability[opentelemetry]>=0.1.0,<0.2.0",
+    "apyra-db[sqlite,postgres]>=0.1.0,<0.2.0",
+    "apyra-auth>=0.1.0,<0.2.0",
+    "apyra-workflow>=0.1.0,<0.2.0",
+    "apyra-messaging[outbox,redis]>=0.1.0,<0.2.0",
+    "uvicorn>=0.30.0",
+]
+
+[tool.uv.sources]
+apyra-fastapi = { path = "../../packages/fastapi", editable = true }
+apyra-application = { path = "../../packages/application", editable = true }
+apyra-domain = { path = "../../packages/domain", editable = true }
+apyra-observability = { path = "../../packages/observability", editable = true }
+apyra-db = { path = "../../packages/db", editable = true }
+apyra-auth = { path = "../../packages/auth", editable = true }
+apyra-workflow = { path = "../../packages/workflow", editable = true }
+apyra-messaging = { path = "../../packages/messaging", editable = true }
+apyra-core = { path = "../../packages/core", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "httpx>=0.28.0",
+    "ruff>=0.17.0",
+    "mypy>=2.4.0",
+    "pyright>=1.1.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -1,0 +1,37 @@
+{
+  "name": "Apyra Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/apyra",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/apyra,type=bind,consistency=cached",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
+  },
+  "postCreateCommand": "uv sync --all-packages --all-extras",
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": {
+      "label": "Apyra Dev Server",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
+        "python.testing.pytestEnabled": true
+      }
+    }
+  }
+}

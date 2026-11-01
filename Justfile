@@ -71,10 +71,23 @@ typecheck: mypy pyright
 check: lint mypy pyright test
 
 # ----------------------------------------------------------------------
+# Dokumentation
+# ----------------------------------------------------------------------
+docs-serve:
+    uv run --group docs mkdocs serve
+
+docs-build:
+    uv run --group docs mkdocs build --strict
+
+docs-check:
+    uv run --group docs pytest tests/integration/test_documentation.py -q
+    just docs-build
+
+# ----------------------------------------------------------------------
 # Packaging
 # ----------------------------------------------------------------------
 build:
-    for package in core fastapi storage db auth cache ai observability email channels i18n events security tasks cli; do \
+    for package in core fastapi storage db auth cache ai observability email channels i18n events security tasks cli application domain messaging workflow; do \
       uv build --package "apyra-${package}"; \
     done
     uv build --package apyra
@@ -90,7 +103,7 @@ install-test:
 # ----------------------------------------------------------------------
 clean:
     rm -rf .venv .pytest_cache .ruff_cache .mypy_cache .pyright_cache \
-           dist build htmlcov coverage.xml
+           dist build site htmlcov coverage.xml
     find . -type d -name "__pycache__" -exec rm -rf {} +
     find . -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete
 

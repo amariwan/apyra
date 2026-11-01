@@ -24,6 +24,8 @@ Initial release of the Apyra framework workspace.
 ### Packages
 
 - `apyra-core`
+- `apyra-application`
+- `apyra-domain`
 - `apyra-fastapi`
 - `apyra-db`
 - `apyra-auth`
@@ -35,6 +37,8 @@ Initial release of the Apyra framework workspace.
 - `apyra-channels`
 - `apyra-i18n`
 - `apyra-events`
+- `apyra-messaging`
+- `apyra-workflow`
 - `apyra-security`
 - `apyra-tasks`
 - `apyra-cli`

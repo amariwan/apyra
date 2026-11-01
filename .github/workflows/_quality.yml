@@ -63,14 +63,58 @@ jobs:
         env:
           PYTHON_VERSION: ${{ inputs.python-version }}
         run: |
-          for package in ai auth cache channels cli core db email events fastapi i18n observability security storage tasks; do
+          for package in ai application auth cache channels cli core db domain email events fastapi i18n messaging observability security storage tasks workflow; do
             uv run --no-sync --python "${PYTHON_VERSION}" pyright --verifytypes "apyra.${package}" --ignoreexternal
           done
+
+  docs:
+    name: docs (${{ inputs.python-version }})
+    if: inputs.python-version == '3.12'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-workspace
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Documentation
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: uv run --no-sync --python "${PYTHON_VERSION}" --group docs mkdocs build --strict
 
   test:
     name: test (${{ inputs.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: apyra
+          POSTGRES_PASSWORD: apyra
+          POSTGRES_DB: apyra_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U apyra -d apyra_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APYRA_TEST_POSTGRES_URL: postgresql+asyncpg://apyra:apyra@localhost:5432/apyra_test
+      APYRA_TEST_POSTGRES_URL_SYNC: postgresql+psycopg://apyra:apyra@localhost:5432/apyra_test
+      APYRA_TEST_REDIS_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

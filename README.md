@@ -8,10 +8,11 @@
 
 > Modular Python framework for building FastAPI applications with explicit, composable infrastructure.
 
-Apyra is a **uv-workspace monorepo** of 16 independently publishable Python packages under the
+Apyra is a **uv-workspace monorepo** of 20 independently publishable Python packages under the
 `apyra.*` namespace. Instead of one large framework, you install only the pieces you need —
 core primitives, FastAPI wiring, database access, auth, storage, cache, AI, observability,
-email, realtime channels, i18n, events, security, background tasks, and a developer CLI —
+email, realtime channels, i18n, events, security, background tasks, domain/application primitives,
+messaging, workflow orchestration, and a developer CLI —
 and compose them explicitly.
 
 **Python ≥ 3.12 · MIT · FastAPI · async-first**
@@ -40,6 +41,8 @@ FastAPI already provides routing, dependency injection, and OpenAPI. Apyra is **
 | Package | What it provides |
 |---|---|
 | `apyra-core` | Settings, errors, framework primitives |
+| `apyra-domain` | Entities, value objects, domain events, repository contracts |
+| `apyra-application` | Use-case and application-service contracts |
 | `apyra-fastapi` | FastAPI application factory and HTTP adapters |
 | `apyra-db` | Async database infrastructure and repositories |
 | `apyra-auth` | JWT, OAuth2/OIDC, RBAC, authorization policies |
@@ -51,57 +54,30 @@ FastAPI already provides routing, dependency injection, and OpenAPI. Apyra is **
 | `apyra-channels` | Realtime channel primitives and pub/sub |
 | `apyra-i18n` | Internationalization primitives |
 | `apyra-events` | Typed event bus and Redis Streams support |
+| `apyra-messaging` | Envelopes, Redis Streams, outbox, retry, idempotency |
 | `apyra-tasks` | Background task primitives and adapters |
+| `apyra-workflow` | Persistent workflow orchestration |
 | `apyra-security` | Security primitives |
 | `apyra-cli` | Developer CLI |
 | `apyra` | Metapackage with installation bundles |
 
 ## Quick start (5 minutes)
 
-PyPI packages are not published yet. Try the bundled example from the source checkout:
-
-```bash
-# With uv (recommended)
-uv add apyra-core apyra-fastapi
-# Optional: the apyra metapackage provides additional dependency bundles.
-```
-
-If the packages are not yet available on PyPI, clone this repository and use the
-workspace setup below instead. Do not assume a PyPI release exists.
-
-### 2. Create an app
-
-```python
-from fastapi import APIRouter
-
-from apyra.core import Settings
-from apyra.fastapi import create_app
-
-router = APIRouter()
-
-
-@router.get("/hello")
-async def hello() -> dict[str, str]:
-    return {"message": "Hello from Apyra"}
-
-
-app = create_app(
-    title="My API",
-    routers=[router],
-    settings=Settings(api_prefix="/api"),
-)
-```
-
-### 3. Run
+PyPI packages are not published yet. Clone the repository and run natively with Python 3.12+, `uv`,
+and `just` (no Docker or Devcontainer required):
 
 ```bash
 git clone https://github.com/amariwan/apyra.git
 cd apyra
 uv sync --all-packages --all-extras
-uv run uvicorn main:app --app-dir examples/minimal-api --host 127.0.0.1 --port 5000 --reload
+uv run --project examples/minimal-api uvicorn main:app --app-dir examples/minimal-api --host 0.0.0.0 --port 5000
 ```
 
 Then open <http://localhost:5000/docs>.
+
+The complete [five-minute quickstart](docs/getting-started/quickstart.md) generates a project, checks
+the health route, shows how to add a protected endpoint, and provides the test command. Do not assume
+a package-index release exists until release readiness confirms it.
 
 A complete runnable example lives in [`examples/minimal-api`](examples/minimal-api).
 An authenticated example (JWT issuance + role/scope guards) lives in
@@ -119,20 +95,42 @@ An events example (typed event bus) lives in
 
 ```bash
 uv sync --all-packages --all-extras
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest
+just check
 ```
 
-Run the full quality gate (lint + typecheck + tests):
+The `just check` recipe runs lint, mypy, Pyright, and the complete pytest suite. Marker-filtered test
+recipes are not substitutes for the full suite. Infrastructure skips are unverified scenarios.
+
+## Documentation
 
 ```bash
-uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pyright && uv run pytest
+just docs-check
+just docs-serve
 ```
 
-> The `just check` recipe runs lint, mypy, pyright, and the normal pytest suite.
-> The marker-filtered `just test-unit` and `just test-integration` recipes are not
-> equivalent to the full suite until all tests have appropriate markers.
+The MkDocs Material site includes search, accessible light/dark themes, generated package references,
+and strict link validation. It is buildable locally and in CI; it has not been published.
+
+## Optional: Devcontainer
+
+For a reproducible, isolated development environment, Apyra provides an optional Devcontainer
+configuration in [`.devcontainer/`](.devcontainer/). Devcontainers are **not required** — they are a
+convenience for local development and testing.
+
+```bash
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . uv sync --all-packages --all-extras
+devcontainer exec --workspace-folder . just check
+```
+
+## Optional: Docker Infrastructure
+
+Docker and Docker Compose are optional tools for integration testing with PostgreSQL and Redis.
+Core development does not require Docker. See [`docs/guides/testing.md`](docs/guides/testing.md).
+
+The MkDocs Material site includes search, accessible light/dark themes, generated package references,
+and strict link validation. It is buildable locally and in CI; it has not been published.
+
 ## Architecture
 
 Apyra is a standalone monorepo with independently publishable distributions.
@@ -151,10 +149,10 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md).
 - [ ] Stabilize public APIs and versioning policy
 - [ ] Publish packages to PyPI
 - [x] Add runnable examples for auth, database, storage, cache, and events
-- [ ] Add a runnable tasks example
-- [ ] Add integration tests across package boundaries
+- [x] Add a runnable tasks example
+- [x] Add integration tests across package boundaries
 - [ ] Improve package-level READMEs and API docs
-- [ ] Add a documentation site
+- [x] Add a buildable, CI-validated documentation site
 
 ## Contributing
 

@@ -26,6 +26,13 @@ from .performance import (
     set_performance_monitor,
     time_operation,
 )
+from .telemetry import (
+    configure_opentelemetry,
+    get_tracer,
+    instrument_fastapi,
+    instrument_sqlalchemy,
+    span,
+)
 
 setup_logging = configure_logging
 
@@ -41,15 +48,20 @@ __all__ = [
     "capture_exception",
     "capture_message",
     "configure_logging",
+    "configure_opentelemetry",
     "error_monitor",
     "get_error_reporter",
     "get_performance_monitor",
     "get_request_id",
+    "get_tracer",
+    "instrument_fastapi",
+    "instrument_sqlalchemy",
     "measure",
     "monitor_errors",
     "record_duration",
     "set_error_reporter",
     "set_performance_monitor",
     "set_request_id",
+    "span",
     "time_operation",
 ]

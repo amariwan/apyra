@@ -1,0 +1,138 @@
+site_name: Apyra
+site_description: FastAPI simplicity. Enterprise confidence.
+repo_url: https://github.com/amariwan/apyra
+repo_name: amariwan/apyra
+docs_dir: docs
+site_dir: site
+strict: true
+
+theme:
+  name: material
+  language: en
+  features:
+    - content.code.copy
+    - navigation.indexes
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            - packages/application/src
+            - packages/core/src
+            - packages/domain/src
+            - packages/fastapi/src
+            - packages/storage/src
+            - packages/db/src
+            - packages/auth/src
+            - packages/cache/src
+            - packages/ai/src
+            - packages/observability/src
+            - packages/email/src
+            - packages/channels/src
+            - packages/i18n/src
+            - packages/events/src
+            - packages/messaging/src
+            - packages/security/src
+            - packages/tasks/src
+            - packages/cli/src
+            - packages/workflow/src
+          options:
+            docstring_style: google
+            inherited_members: true
+            members_order: source
+            separate_signature: true
+            show_root_full_path: false
+            show_root_heading: true
+            show_signature_annotations: true
+            show_source: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+extra:
+  version:
+    provider: mike
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Introduction: getting-started/introduction.md
+      - Why Apyra?: getting-started/why-apyra.md
+      - Installation: getting-started/installation.md
+      - Five-minute quickstart: getting-started/quickstart.md
+  - Guides:
+      - CLI: guides/cli.md
+      - Architecture: architecture/overview.md
+      - Authentication: guides/authentication.md
+      - Database: guides/database.md
+      - Messaging: guides/messaging.md
+      - Tasks: guides/tasks.md
+      - Workflow: guides/workflow.md
+      - Observability: guides/observability.md
+      - Security: guides/security.md
+      - Deployment: guides/deployment.md
+      - Testing: guides/testing.md
+      - Troubleshooting: guides/troubleshooting.md
+  - Migration guides: migrations/index.md
+  - Package reference:
+      - Overview: reference/index.md
+      - Metapackage: reference/meta.md
+      - AI: reference/ai.md
+      - Application: reference/application.md
+      - Authentication: reference/auth.md
+      - Cache: reference/cache.md
+      - Channels: reference/channels.md
+      - CLI: reference/cli.md
+      - Core: reference/core.md
+      - Database: reference/db.md
+      - Domain: reference/domain.md
+      - Email: reference/email.md
+      - Events: reference/events.md
+      - FastAPI: reference/fastapi.md
+      - Internationalization: reference/i18n.md
+      - Messaging: reference/messaging.md
+      - Observability: reference/observability.md
+      - Security: reference/security.md
+      - Storage: reference/storage.md
+      - Tasks: reference/tasks.md
+      - Workflow: reference/workflow.md
+  - Project:
+      - Changelog: project/changelog.md
+      - Contributing: project/contributing.md
+      - Compatibility: project/compatibility.md
+  - Release:
+      - Readiness: release/readiness-assessment.md
+      - Validation: release/validation.md
+      - Runbook: release/runbook.md

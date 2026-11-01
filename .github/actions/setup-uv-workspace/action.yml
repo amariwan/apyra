@@ -1,5 +1,5 @@
 name: Setup uv workspace
-description: Install uv with the requested Python version and sync all workspace packages and extras using the committed lockfile.
+description: Install uv with the requested Python version and sync all workspace packages, extras, and dependency groups using the committed lockfile.
 
 inputs:
   python-version:
@@ -19,4 +19,4 @@ runs:
       shell: bash
       env:
         PYTHON_VERSION: ${{ inputs.python-version }}
-      run: uv sync --frozen --python "${PYTHON_VERSION}" --all-packages --all-extras
+      run: uv sync --frozen --python "${PYTHON_VERSION}" --all-packages --all-extras --all-groups

@@ -2,36 +2,53 @@
 
 Storage contracts and filesystem/S3 backends for Apyra.
 
+## Purpose
+
+`apyra-storage` defines a storage client contract plus filesystem and S3 backends, with path normalization and typed errors. Backends are selected via settings/extras.
+
 ## Installation
 
 ```bash
-uv add apyra-storage
-uv add 'apyra-storage[s3]' # boto3 for S3-compatible storage
+uv add apyra-storage               # filesystem backend
+uv add "apyra-storage[s3]"         # + S3 (boto3)
 ```
 
-## Quick usage
+## Minimal usage
 
 ```python
 from apyra.storage import get_storage_client
 
-client = get_storage_client()
-client.upload_file(b"hello", "docs/hello.txt")
-data = client.download_file("docs/hello.txt")
+client = get_storage_client()  # configured via StorageSettings
 ```
 
-## S3 endpoint security
+## Optional dependencies
 
-`s3_secure` defaults to `true` and requires a configured endpoint to use HTTPS. Set it to `false` only when connecting to an explicitly configured HTTP endpoint, such as a local development service. An endpoint URL that uses HTTPS remains HTTPS regardless of this setting.
+- `s3`: `boto3`, `botocore`
 
-`S3StorageClient.generate_presigned_url()` accepts a positive integer `expires_in` duration in seconds (default: 3600) and raises `ValueError` for zero, negative, boolean, or non-integer values.
+## Configuration
 
-## Key exports
+`StorageSettings` / `StorageBackend` via Pydantic Settings. Environment prefix defined in `apyra.storage.settings`.
+
+## Public API
 
 - `StorageClient`, `FileMetadata`
 - `FilesystemStorageClient`, `S3StorageClient`
-- `StorageSettings`, `StorageBackend`, `get_storage_settings`
-- `get_storage_client`
+- `StorageBackend`, `StorageSettings`, `get_storage_client`
 - `StorageError`, `StorageFileNotFoundError`, `StorageConfigError`
+- `normalize_storage_path`
+
+## Error behavior
+
+Missing files raise `StorageFileNotFoundError`; configuration problems raise `StorageConfigError`; other failures raise `StorageError`.
+
+## Integration
+
+Used by application code for uploads/downloads. Combine with `apyra-fastapi` for HTTP upload endpoints.
+
+## Compatibility
+
+- Python ≥ 3.12
+- S3 extra requires boto3 ≥ 1.34
 
 ## License
 

@@ -131,7 +131,7 @@ jobs:
           print(f"Validated {len(manifests)} distributions at version {expected}")
           PY
       - run: |
-          for package in core fastapi storage db auth cache ai observability email channels i18n events security tasks cli; do
+          for package in application core domain fastapi storage db auth cache ai observability email channels i18n events messaging security tasks cli workflow; do
             uv build --package "apyra-${package}"
           done
           uv build --package apyra
@@ -249,18 +249,22 @@ jobs:
       matrix:
         package:
           - ai
+          - application
           - auth
           - cache
           - channels
           - cli
           - db
+          - domain
           - email
           - events
           - i18n
+          - messaging
           - observability
           - security
           - storage
           - tasks
+          - workflow
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: ${{ format('pypi-{0}', matrix.package) }}
@@ -301,18 +305,22 @@ jobs:
       matrix:
         package:
           - ai
+          - application
           - auth
           - cache
           - channels
           - cli
           - db
+          - domain
           - email
           - events
           - i18n
+          - messaging
           - observability
           - security
           - storage
           - tasks
+          - workflow
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

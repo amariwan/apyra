@@ -14,6 +14,12 @@ dependencies = [
 redis = ["redis>=5.0.0"]
 rabbitmq = ["aio-pika>=9.0.0"]
 
+[project.urls]
+Homepage = "https://github.com/amariwan/apyra"
+Repository = "https://github.com/amariwan/apyra"
+Issues = "https://github.com/amariwan/apyra/issues"
+Documentation = "https://github.com/amariwan/apyra/tree/main/docs"
+
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]
 build-backend = "uv_build"

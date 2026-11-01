@@ -1,0 +1,53 @@
+[project]
+name = "apyra-messaging"
+version = "0.1.0"
+description = "Messaging contracts and reliability primitives for Apyra."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "amariwan" }]
+dependencies = [
+    "apyra-core>=0.1.0,<0.2.0",
+    "apyra-application>=0.1.0,<0.2.0",
+    "apyra-domain>=0.1.0,<0.2.0",
+]
+
+[project.optional-dependencies]
+outbox = ["apyra-db>=0.1.0,<0.2.0", "sqlalchemy>=2.0.0"]
+redis = ["redis>=5.0.0"]
+
+[tool.uv.sources]
+apyra-core = { workspace = true }
+apyra-application = { workspace = true }
+apyra-domain = { workspace = true }
+apyra-db = { workspace = true }
+
+[project.urls]
+Homepage = "https://github.com/amariwan/apyra"
+Repository = "https://github.com/amariwan/apyra"
+Issues = "https://github.com/amariwan/apyra/issues"
+Documentation = "https://github.com/amariwan/apyra/tree/main/docs"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["apyra.messaging"]
+namespace = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "postgres: PostgreSQL integration tests",
+    "redis: Redis integration tests",
+]

@@ -1,0 +1,3 @@
+# `apyra.fastapi`
+
+::: apyra.fastapi

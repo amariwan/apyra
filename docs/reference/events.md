@@ -1,0 +1,3 @@
+# `apyra.events`
+
+::: apyra.events

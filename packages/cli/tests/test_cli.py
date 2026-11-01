@@ -278,3 +278,180 @@ def test_rejects_unsafe_names_without_writing(
     assert not (tmp_path / "outside.py").exists()
     assert not (workspace / "outside.py").exists()
     assert not any(workspace.iterdir())
+
+
+def test_doctor_runs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["doctor"]) == 0
+
+
+def test_doctor_json_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["doctor", "--json"]) == 0
+    captured = capsys.readouterr()
+    assert captured.out.strip().startswith("[")
+
+
+def test_generate_resource_creates_files(tmp_path: Path) -> None:
+    original = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+        assert main(["generate", "resource", "Order"]) == 0
+        assert (tmp_path / "models" / "order.py").is_file()
+        assert (tmp_path / "usecases" / "order.py").is_file()
+        assert (tmp_path / "tests" / "test_order.py").is_file()
+    finally:
+        os.chdir(original)
+
+
+def test_generate_usecase_dry_run(tmp_path: Path) -> None:
+    original = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+        assert main(["generate", "usecase", "CreateOrder", "--dry-run"]) == 0
+        assert not (tmp_path / "usecases" / "create_order.py").exists()
+    finally:
+        os.chdir(original)
+
+
+def test_new_dry_run(tmp_path: Path) -> None:
+    original = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+        assert main(["new", "demo", "--dry-run"]) == 0
+        assert not (tmp_path / "demo").exists()
+    finally:
+        os.chdir(original)
+
+
+def test_new_interactive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    import io
+
+    monkeypatch.setattr("sys.stdin", io.StringIO("demo\nminimal\n"))
+    assert main(["new", "--interactive"]) == 0
+    assert (tmp_path / "demo" / "main.py").is_file()
+
+
+def test_new_modular_monolith_template_creates_clean_architecture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["new", "mm_demo", "--template", "modular-monolith"]) == 0
+    generated = tmp_path / "mm_demo"
+    assert (generated / "main.py").is_file()
+    assert (generated / "domain" / "health.py").is_file()
+    assert (generated / "application" / "use_cases.py").is_file()
+    assert (generated / "api" / "router.py").is_file()
+    assert (generated / "tests" / "test_health.py").is_file()
+    assert (generated / "Dockerfile").is_file()
+    source = (generated / "main.py").read_text()
+    assert "create_app" in source
+    assert "configure_logging" in source
+
+
+def test_new_distributed_template_creates_enterprise_structure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["new", "dist_demo", "--template", "distributed"]) == 0
+    generated = tmp_path / "dist_demo"
+    assert (generated / "main.py").is_file()
+    assert (generated / "domain" / "order.py").is_file()
+    assert (generated / "infrastructure" / "repository.py").is_file()
+    assert (generated / "api" / "router.py").is_file()
+    assert (generated / "tests" / "test_reference.py").is_file()
+    source = (generated / "main.py").read_text()
+    assert "create_app" in source
+    assert "configure_opentelemetry" in source
+
+
+def test_new_modular_monolith_dry_run_does_not_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["new", "mm_demo", "--template", "modular-monolith", "--dry-run"]) == 0
+    assert not (tmp_path / "mm_demo").exists()
+
+
+def test_new_distributed_dry_run_does_not_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["new", "dist_demo", "--template", "distributed", "--dry-run"]) == 0
+    assert not (tmp_path / "dist_demo").exists()
+
+
+def test_new_modular_monolith_generated_app_serves_health(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["new", "mm_demo", "--template", "modular-monolith"]) == 0
+
+    generated = tmp_path / "mm_demo"
+    import sys
+
+    sys.path.insert(0, str(generated))
+    try:
+        import importlib
+
+        module = importlib.import_module("main")
+        from fastapi.testclient import TestClient
+
+        with TestClient(module.app) as client:
+            response = client.get("/api/health")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+    finally:
+        sys.path.remove(str(generated))
+        for mod in (
+            "main",
+            "api",
+            "api.router",
+            "application",
+            "application.use_cases",
+            "domain",
+            "domain.health",
+            "infrastructure",
+        ):
+            sys.modules.pop(mod, None)
+
+
+def test_new_distributed_generated_app_serves_health(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["new", "dist_demo", "--template", "distributed"]) == 0
+
+    generated = tmp_path / "dist_demo"
+    import sys
+
+    sys.path.insert(0, str(generated))
+    try:
+        import importlib
+
+        module = importlib.import_module("main")
+        from fastapi.testclient import TestClient
+
+        with TestClient(module.app) as client:
+            response = client.get("/api/health")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+    finally:
+        sys.path.remove(str(generated))
+        for mod in (
+            "main",
+            "api",
+            "api.router",
+            "application",
+            "application.create_order",
+            "domain",
+            "domain.order",
+            "infrastructure",
+            "infrastructure.models",
+            "infrastructure.repository",
+            "infrastructure.database",
+        ):
+            sys.modules.pop(mod, None)

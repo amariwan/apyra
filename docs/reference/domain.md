@@ -1,0 +1,3 @@
+# `apyra.domain`
+
+::: apyra.domain
