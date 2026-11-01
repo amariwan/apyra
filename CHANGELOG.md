@@ -16,6 +16,10 @@
 - Repair release workflow dependency graph, version propagation, tag glob, manual dispatch guard, recovery-friendly publishing, and add automated workflow validation tests.
 - `apyra new <name> --template cookie-auth` generates an opt-in cookie-auth integration starter
   with CSRF protection on unsafe routes; the default minimal starter is unchanged.
+- The `apyra` CLI prints a startup banner on interactive terminals showing the framework version
+  and environment. The banner is automatically disabled in CI, for `doctor --json`, and on
+  non-TTY output, and can be suppressed with `--no-banner` or `APYRA_NO_BANNER=1`; colored
+  rendering uses the optional `rich` extra.
 
 ## 0.1.0
 

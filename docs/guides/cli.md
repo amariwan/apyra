@@ -67,3 +67,11 @@ uv run apyra generate --help
 The CLI exposes an interactive builder (`apyra new --interactive`), `apyra doctor`, and `--dry-run`
 for every generator. Generated code is a starting point and must be integrated into the
 application's composition root.
+
+## Startup banner
+
+Interactive terminals print a startup banner with the framework version and environment on every
+invocation. The banner is disabled automatically in CI, for `apyra doctor --json`, and whenever
+stdout is not a terminal. It can also be turned off explicitly with `--no-banner` or
+`APYRA_NO_BANNER=1`. Install the optional `rich` extra (`apyra-cli[rich]`) for colored output;
+without it the banner renders as plain text.

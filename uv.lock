@@ -560,13 +560,17 @@ dependencies = [
 redis = [
     { name = "redis" },
 ]
+rich = [
+    { name = "rich" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "apyra-core", editable = "packages/core" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0.0" },
+    { name = "rich", marker = "extra == 'rich'", specifier = ">=13.0.0" },
 ]
-provides-extras = ["redis"]
+provides-extras = ["redis", "rich"]
 
 [[package]]
 name = "apyra-core"

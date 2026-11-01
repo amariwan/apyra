@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from .banner import print_banner, should_show_banner
 from .templates import new_distributed, new_modular_monolith
 
 _COOKIE_AUTH_MAIN = """import os
@@ -699,6 +700,11 @@ def _run_doctor(*, json_output: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Parse CLI arguments, run the selected command, and return its exit status."""
     parser = argparse.ArgumentParser(prog="apyra")
+    parser.add_argument(
+        "--no-banner",
+        action="store_true",
+        help="Disable the startup banner",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     new_parser = subparsers.add_parser("new")
@@ -769,6 +775,12 @@ def main(argv: list[str] | None = None) -> int:
     doctor_parser.add_argument("--json", action="store_true", dest="json_output")
 
     args = parser.parse_args(argv)
+
+    if should_show_banner(
+        no_banner=args.no_banner,
+        json_output=bool(getattr(args, "json_output", False)),
+    ):
+        print_banner()
 
     if args.command == "new":
         if args.name is None:

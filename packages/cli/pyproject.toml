@@ -12,6 +12,7 @@ dependencies = [
 
 [project.optional-dependencies]
 redis = ["redis>=5.0.0"]
+rich = ["rich>=13.0.0"]
 
 [project.scripts]
 apyra = "apyra.cli.main:main"
