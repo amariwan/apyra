@@ -16,19 +16,23 @@ Create one protected GitHub environment per distribution:
 |---|---|---|
 | apyra-core | pypi-core | publish.yml |
 | apyra-ai | pypi-ai | publish.yml |
+| apyra-application | pypi-application | publish.yml |
 | apyra-auth | pypi-auth | publish.yml |
 | apyra-cache | pypi-cache | publish.yml |
 | apyra-channels | pypi-channels | publish.yml |
 | apyra-cli | pypi-cli | publish.yml |
 | apyra-db | pypi-db | publish.yml |
+| apyra-domain | pypi-domain | publish.yml |
 | apyra-email | pypi-email | publish.yml |
 | apyra-events | pypi-events | publish.yml |
 | apyra-fastapi | pypi-fastapi | publish.yml |
 | apyra-i18n | pypi-i18n | publish.yml |
+| apyra-messaging | pypi-messaging | publish.yml |
 | apyra-observability | pypi-observability | publish.yml |
 | apyra-security | pypi-security | publish.yml |
 | apyra-storage | pypi-storage | publish.yml |
 | apyra-tasks | pypi-tasks | publish.yml |
+| apyra-workflow | pypi-workflow | publish.yml |
 | apyra | pypi-meta | publish.yml |
 
 Each PyPI project must use trusted publishing with:
@@ -95,7 +99,7 @@ Each dependent package waits for successful publication and PyPI availability of
 ## Verification
 
 - GitHub Actions quality, build, validation, publish, verify, and smoke-test jobs succeed.
-- PyPI shows all 16 distributions at the release version.
+- PyPI shows all 20 distributions at the release version.
 - `apyra[all]` installs from PyPI in an isolated environment.
 - FastAPI smoke test passes.
 
