@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from .base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from .base import Base, TenantScopedMixin, TimestampMixin, UUIDPrimaryKeyMixin
 from .connection import build_async_database_url, build_sync_database_url
-from .repository import CursorPage, Page, Repository
+from .repository import CursorPage, Page, Repository, TenantScopedRepository
 from .session import (
     DatabaseManager,
     DatabaseSessionManager,
@@ -23,6 +23,8 @@ __all__ = [
     "DbSettings",
     "Page",
     "Repository",
+    "TenantScopedMixin",
+    "TenantScopedRepository",
     "TimestampMixin",
     "UUIDPrimaryKeyMixin",
     "build_async_database_url",

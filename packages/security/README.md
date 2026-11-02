@@ -36,6 +36,24 @@ No central settings; functions accept explicit parameters.
 - `generate_csrf_token`, `verify_csrf_token`
 - `constant_time_compare`
 - `redact_mapping`
+- `TenantContext`, `TenantResolver`, `require_tenant`
+- `get_current_tenant`, `set_current_tenant`, `reset_current_tenant` (request-scoped tenant context)
+
+## Multi-tenancy
+
+`apyra-security` provides the tenant *context* primitives; combine them with
+`TenantScopedMixin` and `TenantScopedRepository` from `apyra-db` for fail-closed,
+tenant-scoped data access:
+
+```python
+from apyra.security import TenantContext, set_current_tenant, reset_current_tenant
+
+token = set_current_tenant(TenantContext(tenant_id="tenant-a"))
+try:
+    # ... request handling; repositories resolve the tenant from context ...
+finally:
+    reset_current_tenant(token)
+```
 
 ## Error behavior
 

@@ -46,9 +46,23 @@ class CursorPage[ModelT: Base]:
 class Repository(Generic[ModelT]):  # noqa: UP046
     """Run common async queries and persistence operations for one model."""
 
-    def __init__(self, session: AsyncSession, model: type[ModelT]) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        model: type[ModelT],
+        *,
+        default_scope: Callable[[Any], Any] | None = None,
+    ) -> None:
         self.session = session
         self.model = model
+        self._default_scope = default_scope
+
+    def _apply_scope(self, statement: Any, scope: Callable[[Any], Any] | None) -> Any:
+        if self._default_scope is not None:
+            statement = self._default_scope(statement)
+        if scope is not None:
+            statement = scope(statement)
+        return statement
 
     def _apply_filters(self, statement: Any, filters: dict[str, object] | None) -> Any:
         if not filters:
@@ -67,8 +81,20 @@ class Repository(Generic[ModelT]):  # noqa: UP046
         return statement.order_by(column.asc())
 
     async def get(self, item_id: Any) -> ModelT | None:
-        """Return the model with this primary key, or ``None`` if absent."""
-        return await self.session.get(self.model, item_id)
+        """Return the model with this primary key, or ``None`` if absent.
+
+        When a ``default_scope`` is configured (for example a tenant filter), the
+        lookup is restricted by that scope so out-of-scope rows are never returned.
+        """
+        if self._default_scope is None:
+            return await self.session.get(self.model, item_id)
+        primary_key = list(self.model.__mapper__.primary_key)
+        if len(primary_key) != 1:
+            return await self.session.get(self.model, item_id)
+        statement = select(self.model).where(primary_key[0] == item_id)
+        statement = self._apply_scope(statement, None)
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
 
     async def count(
         self, *, filters: dict[str, object] | None = None, scope: Callable[[Any], Any] | None = None
@@ -76,8 +102,7 @@ class Repository(Generic[ModelT]):  # noqa: UP046
         """Count matching rows after filters and an optional statement scope."""
         statement = select(func.count()).select_from(self.model)
         statement = self._apply_filters(statement, filters)
-        if scope is not None:
-            statement = scope(statement)
+        statement = self._apply_scope(statement, scope)
         result = await self.session.execute(statement)
         return int(result.scalar_one())
 
@@ -94,8 +119,7 @@ class Repository(Generic[ModelT]):  # noqa: UP046
         """Return filtered, ordered rows within the requested offset window."""
         statement = select(self.model)
         statement = self._apply_filters(statement, filters)
-        if scope is not None:
-            statement = scope(statement)
+        statement = self._apply_scope(statement, scope)
         statement = self._apply_ordering(statement, order_by, descending=descending)
         statement = statement.limit(limit).offset(offset)
         result = await self.session.execute(statement)
@@ -153,8 +177,7 @@ class Repository(Generic[ModelT]):  # noqa: UP046
         ]
         statement = select(self.model)
         statement = self._apply_filters(statement, filters)
-        if scope is not None:
-            statement = scope(statement)
+        statement = self._apply_scope(statement, scope)
         if cursor is not None:
             try:
                 values = _decode_cursor(cursor)
@@ -210,6 +233,25 @@ class Repository(Generic[ModelT]):  # noqa: UP046
         """Delete a model and flush the session."""
         await self.session.delete(instance)
         await self.session.flush()
+
+
+class TenantScopedRepository(Repository[ModelT]):
+    """Repository that automatically restricts every query to one tenant.
+
+    The model must include a ``tenant_id`` column (use
+    :class:`apyra.db.TenantScopedMixin`). Every read, count, and paginate operation
+    is filtered by the configured tenant id, so cross-tenant reads fail closed
+    without relying on callers to remember a tenant filter.
+    """
+
+    def __init__(self, session: AsyncSession, model: type[ModelT], tenant_id: str) -> None:
+        self.tenant_id = tenant_id
+        tenant_column = cast(Any, model).tenant_id
+
+        def tenant_scope(statement: Any) -> Any:
+            return statement.where(tenant_column == tenant_id)
+
+        super().__init__(session, model, default_scope=tenant_scope)
 
 
 def _encode_cursor(values: list[object]) -> str:

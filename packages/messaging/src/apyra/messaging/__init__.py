@@ -12,11 +12,19 @@ from .contracts import (
     MessagePublisher,
     RetryPolicy,
 )
-from .idempotency import InMemoryIdempotencyStore
+from .idempotency import (
+    AtomicIdempotencyStore,
+    ClaimResult,
+    InMemoryIdempotencyStore,
+    PostgresIdempotencyStore,
+    RedisIdempotencyStore,
+)
 from .redis_streams import RedisStreamsConsumer, RedisStreamsPublisher
 from .retry import ExponentialBackoff
 
 __all__ = [
+    "AtomicIdempotencyStore",
+    "ClaimResult",
     "DeadLetterPolicy",
     "DeliveryContext",
     "ExponentialBackoff",
@@ -26,6 +34,8 @@ __all__ = [
     "MessageEnvelope",
     "MessageHandler",
     "MessagePublisher",
+    "PostgresIdempotencyStore",
+    "RedisIdempotencyStore",
     "RedisStreamsConsumer",
     "RedisStreamsPublisher",
     "RetryPolicy",

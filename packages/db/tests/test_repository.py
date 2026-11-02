@@ -10,7 +10,15 @@ from sqlalchemy import Date, DateTime, LargeBinary, Numeric, String, Uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
-from apyra.db import Base, DatabaseManager, DbSettings, Repository, build_async_database_url
+from apyra.db import (
+    Base,
+    DatabaseManager,
+    DbSettings,
+    Repository,
+    TenantScopedMixin,
+    TenantScopedRepository,
+    build_async_database_url,
+)
 
 
 class Item(Base):
@@ -25,6 +33,12 @@ class Item(Base):
     binary_value: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
 
+class TenantItem(Base, TenantScopedMixin):
+    __tablename__ = "tenant_items"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+
+
 @pytest.mark.asyncio
 async def test_cursor_pagination_rejects_oversized_cursor_json() -> None:
     payload = json.dumps(["x" * 20_000]).encode("utf-8")
@@ -33,6 +47,32 @@ async def test_cursor_pagination_rejects_oversized_cursor_json() -> None:
 
     with pytest.raises(ValueError, match="cursor is invalid"):
         await repository.paginate(cursor=cursor)
+
+
+@pytest.mark.asyncio
+async def test_tenant_scoped_repository_isolates_tenants() -> None:
+    settings = DbSettings(db_enabled=True, db_backend="sqlite", db_database=":memory:")
+    manager = DatabaseManager(build_async_database_url(settings), engine_kwargs={"echo": False})
+    try:
+        await manager._ensure_current_loop()
+        engine = manager.engine
+        assert engine is not None
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with manager.session() as session:
+            base = Repository(session, TenantItem)
+            await base.create(id="a1", name="alpha", tenant_id="tenant-a")
+            await base.create(id="b1", name="beta", tenant_id="tenant-b")
+
+            repo_a = TenantScopedRepository(session, TenantItem, "tenant-a")
+            # list(), count(), and get()-by-id are all restricted to tenant-a.
+            assert [item.id for item in await repo_a.list()] == ["a1"]
+            assert await repo_a.count() == 1
+            assert await repo_a.get("b1") is None
+            fetched = await repo_a.get("a1")
+            assert fetched is not None and fetched.name == "alpha"
+    finally:
+        await manager.close()
 
 
 @pytest.mark.asyncio

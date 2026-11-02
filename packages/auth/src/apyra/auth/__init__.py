@@ -29,6 +29,7 @@ from .oauth2 import (
     generate_pkce_pair,
 )
 from .oidc import OAuth2TokenIntrospector, OIDCConfiguration, discover_oidc
+from .redis_revocation import RedisRevocationStore
 from .roles import extract_roles, extract_scopes, has_role
 from .settings import AuthSettings, get_auth_settings
 from .tokens import (
@@ -60,6 +61,7 @@ __all__ = [
     "OIDCTokenValidator",
     "Policy",
     "PolicyEngine",
+    "RedisRevocationStore",
     "RolePolicy",
     "ScopePolicy",
     "Session",

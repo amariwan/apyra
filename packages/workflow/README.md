@@ -15,10 +15,31 @@ uv add apyra-workflow
 ## Minimal usage
 
 ```python
-from apyra.workflow import WorkflowEngine, Workflow
+from sqlalchemy.ext.asyncio import AsyncSession
 
-engine = WorkflowEngine(repository=...)
+from apyra.workflow import Workflow, WorkflowEngine
+
+
+async def run_workflow(session: AsyncSession) -> None:
+    engine = WorkflowEngine(session)
+
+    async def step_one(workflow: Workflow) -> str:
+        return "done"
+
+    workflow = await engine.start(Workflow(name="order"), [step_one])
+    assert workflow.status.value == "completed"
 ```
+
+## Durability guarantees
+
+Steps run sequentially and each completed step is committed before the next starts, so a
+crash never repeats a completed step. `WorkflowRepository.reconstruct` and
+`WorkflowEngine.resume` rebuild a workflow from storage and continue from the first
+incomplete step.
+
+Durability across multiple workers is **experimental**: the engine does not yet coordinate
+workers claiming the same workflow, and step handlers must be idempotent because a step that
+fails after its side effects (but before commit) may re-run.
 
 ## Optional dependencies
 

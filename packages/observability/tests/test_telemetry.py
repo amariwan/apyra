@@ -9,6 +9,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from apyra.observability import configure_opentelemetry, get_tracer, span
+from apyra.observability.telemetry import _sqlalchemy_is_instrumentable
 
 
 def test_configure_opentelemetry_sets_provider() -> None:
@@ -28,3 +29,12 @@ def test_span_records() -> None:
         pass
     spans = exporter.get_finished_spans()
     assert any(s.name == "work" for s in spans)
+
+
+def test_sqlalchemy_instrumentability_matches_installed_version() -> None:
+    import importlib.metadata
+
+    version = importlib.metadata.version("sqlalchemy")
+    major, minor = (int(part) for part in version.split(".")[:2])
+    expected = (major, minor) < (2, 1)
+    assert _sqlalchemy_is_instrumentable() is expected

@@ -21,7 +21,7 @@ uv add "apyra-db[migrations]"        # + alembic
 ```python
 from apyra.db import DatabaseSessionManager, get_db_session, Base
 
-manager = DatabaseSessionManager(database_url="sqlite+aiosqlite:///./app.db")
+manager = DatabaseSessionManager("sqlite+aiosqlite:///./app.db")
 ```
 
 ## Optional dependencies
@@ -37,11 +37,32 @@ manager = DatabaseSessionManager(database_url="sqlite+aiosqlite:///./app.db")
 
 ## Public API
 
-- `Base`, `TimestampMixin`, `UUIDPrimaryKeyMixin`
+- `Base`, `TimestampMixin`, `UUIDPrimaryKeyMixin`, `TenantScopedMixin`
 - `DatabaseManager`, `DatabaseSessionManager`, `get_db_session`, `get_sessionmanager`, `ensure_db_schema`
-- `Repository`, `Page`, `CursorPage`
+- `Repository`, `TenantScopedRepository`, `Page`, `CursorPage`
 - `DatabaseSettings`, `DbSettings`, `get_db_settings`
 - `build_async_database_url`, `build_sync_database_url`
+
+## Multi-tenancy
+
+Add `TenantScopedMixin` to a model and use `TenantScopedRepository` to restrict every read,
+count, and paginate operation to one tenant automatically — cross-tenant reads fail closed
+without requiring callers to remember a tenant filter:
+
+```python
+from sqlalchemy.orm import Mapped, mapped_column
+
+from apyra.db import Base, TenantScopedMixin, TenantScopedRepository
+
+
+class Order(Base, TenantScopedMixin):
+    __tablename__ = "orders"
+    id: Mapped[str] = mapped_column(primary_key=True)
+
+
+repository = TenantScopedRepository(session, Order, tenant_id="tenant-a")
+orders = await repository.list()  # always scoped to tenant-a
+```
 
 ## Error behavior
 
