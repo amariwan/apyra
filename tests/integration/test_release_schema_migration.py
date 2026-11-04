@@ -18,6 +18,9 @@ MIGRATION_PATHS = (
     MIGRATION_DIRECTORY / "0.1.0-release-hardening.sql",
     MIGRATION_DIRECTORY / "0.1.0-postgres-idempotency.sql",
 )
+INDEX_MIGRATION_PATH = (
+    MIGRATION_DIRECTORY / "0.1.0-release-hardening-postgres-indexes-concurrently.sql"
+)
 
 
 def _postgres_available() -> bool:
@@ -54,6 +57,10 @@ async def test_release_migration_upgrades_existing_rows() -> None:
         "\n".join(path.read_text(encoding="utf-8") for path in MIGRATION_PATHS),
     )
     statements = [statement.strip() for statement in migration.split(";") if statement.strip()]
+    index_migration = re.sub(r"--[^\n]*", "", INDEX_MIGRATION_PATH.read_text(encoding="utf-8"))
+    index_statements = [
+        statement.strip() for statement in index_migration.split(";") if statement.strip()
+    ]
 
     try:
         async with engine.begin() as connection:
@@ -113,14 +120,6 @@ async def test_release_migration_upgrades_existing_rows() -> None:
                     text("SELECT leased_by, fencing_token, version_id FROM apyra_workflows")
                 )
             ).one()
-            indexes = (
-                await connection.execute(
-                    text(
-                        "SELECT to_regclass('ix_apyra_outbox_poll'), "
-                        "to_regclass('ix_apyra_outbox_lease')"
-                    )
-                )
-            ).one()
             idempotency_created = await connection.scalar(
                 text("SELECT created_at FROM apyra_idempotency WHERE message_id = :id"),
                 {"id": idempotency_id},
@@ -128,8 +127,22 @@ async def test_release_migration_upgrades_existing_rows() -> None:
 
             assert outbox == (None, None, 0)
             assert workflow == (None, None, 0)
-            assert indexes == ("ix_apyra_outbox_poll", "ix_apyra_outbox_lease")
             assert idempotency_created is not None
+
+        async with engine.connect() as connection:
+            autocommit_connection = await connection.execution_options(isolation_level="AUTOCOMMIT")
+            await autocommit_connection.exec_driver_sql(f'SET search_path TO "{schema}"')
+            for statement in index_statements:
+                await autocommit_connection.exec_driver_sql(statement)
+            indexes = (
+                await autocommit_connection.execute(
+                    text(
+                        "SELECT to_regclass('ix_apyra_outbox_poll'), "
+                        "to_regclass('ix_apyra_outbox_lease')"
+                    )
+                )
+            ).one()
+            assert indexes == ("ix_apyra_outbox_poll", "ix_apyra_outbox_lease")
     finally:
         async with engine.begin() as connection:
             await connection.exec_driver_sql(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')

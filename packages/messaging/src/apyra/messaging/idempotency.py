@@ -25,6 +25,10 @@ from uuid import UUID, uuid4
 DEFAULT_TTL_SECONDS = 86_400
 
 
+class IdempotencyClaimLostError(RuntimeError):
+    """Raised when a worker tries to complete a claim it no longer owns."""
+
+
 class ClaimResult(StrEnum):
     """Outcome of an atomic idempotency claim."""
 
@@ -79,8 +83,8 @@ class InMemoryIdempotencyStore:
 
     async def complete(self, message_id: UUID) -> None:
         owner = self._take_claim(message_id)
-        if message_id in self._owners and self._owners[message_id] != owner:
-            return
+        if owner is None or self._owners.get(message_id) != owner:
+            raise IdempotencyClaimLostError("idempotency claim is no longer owned by this task")
         self._processing.discard(message_id)
         self._expires.pop(message_id, None)
         self._owners.pop(message_id, None)
@@ -97,7 +101,10 @@ class InMemoryIdempotencyStore:
         return message_id in self._processed
 
     async def mark_processed(self, message_id: UUID) -> None:
-        await self.complete(message_id)
+        self._processing.discard(message_id)
+        self._expires.pop(message_id, None)
+        self._owners.pop(message_id, None)
+        self._processed.add(message_id)
 
     def _current_claims(self) -> dict[UUID, str]:
         task = asyncio.current_task()
@@ -152,9 +159,8 @@ class RedisIdempotencyStore:
     async def complete(self, message_id: UUID) -> None:
         owner = self._get_claim(message_id)
         if owner is None:
-            await self._client.set(self._key(message_id), "done")
-            return
-        await self._client.eval(
+            raise IdempotencyClaimLostError("idempotency claim is no longer owned by this task")
+        completed = await self._client.eval(
             "if redis.call('GET', KEYS[1]) == ARGV[1] then "
             "return redis.call('SET', KEYS[1], 'done') else return 0 end",
             1,
@@ -162,6 +168,8 @@ class RedisIdempotencyStore:
             f"processing:{owner}",
         )
         self._forget_claim(message_id)
+        if completed != b"OK" and completed != "OK":
+            raise IdempotencyClaimLostError("idempotency claim expired or was taken over")
 
     async def release(self, message_id: UUID) -> None:
         owner = self._get_claim(message_id)
@@ -179,7 +187,7 @@ class RedisIdempotencyStore:
         return _redis_value_is(await self._client.get(self._key(message_id)), "done")
 
     async def mark_processed(self, message_id: UUID) -> None:
-        await self.complete(message_id)
+        await self._client.set(self._key(message_id), "done")
 
     def _current_claims(self) -> dict[UUID, str]:
         task = asyncio.current_task()
@@ -315,14 +323,22 @@ try:  # pragma: no cover - exercised only when SQLAlchemy is installed
 
         async def complete(self, message_id: UUID) -> None:
             owner = self._get_claim(message_id)
+            if owner is None:
+                raise IdempotencyClaimLostError("idempotency claim is no longer owned by this task")
             statement = sa_update(IdempotencyRecord).where(
-                IdempotencyRecord.message_id == message_id
+                IdempotencyRecord.message_id == message_id,
+                IdempotencyRecord.status == f"processing:{owner}",
             )
-            if owner is not None:
-                statement = statement.where(IdempotencyRecord.status == f"processing:{owner}")
-            await self._session.execute(statement.values(status="done", expires_at=None))
-            if owner is not None:
-                self._forget_claim(message_id)
+            completed = (
+                await self._session.execute(
+                    statement.values(status="done", expires_at=None).returning(
+                        IdempotencyRecord.message_id
+                    )
+                )
+            ).scalar_one_or_none()
+            self._forget_claim(message_id)
+            if completed is None:
+                raise IdempotencyClaimLostError("idempotency claim expired or was taken over")
 
         async def release(self, message_id: UUID) -> None:
             owner = self._get_claim(message_id)
@@ -349,7 +365,11 @@ try:  # pragma: no cover - exercised only when SQLAlchemy is installed
             return status == "done"
 
         async def mark_processed(self, message_id: UUID) -> None:
-            await self.complete(message_id)
+            await self._session.execute(
+                sa_update(IdempotencyRecord)
+                .where(IdempotencyRecord.message_id == message_id)
+                .values(status="done", expires_at=None)
+            )
 
         def _current_claims(self) -> dict[UUID, str]:
             task = asyncio.current_task()

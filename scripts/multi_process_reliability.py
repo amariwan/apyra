@@ -1,13 +1,14 @@
 """Multi-OS-process reliability harness for Apyra release certification.
 
-Spawns real OS processes (not threads/tasks) that contend on shared Redis and
-PostgreSQL state, then asserts the framework's atomicity guarantees hold across
-process boundaries.
+Spawns real OS processes (not threads/tasks) that contend on shared Redis state,
+then asserts the framework's atomicity guarantees hold across process boundaries.
 
-Run (requires Redis + PostgreSQL)::
+Run (requires disposable Redis DB 15 and Docker access from the Devcontainer)::
 
-    APYRA_TEST_REDIS_URL=redis://localhost:6379/15 \
-uv run python scripts/multi_process_reliability.py --redis-container apyra-test-redis --processes 8
+    devcontainer exec --workspace-folder . env \
+      APYRA_TEST_REDIS_URL=redis://host.docker.internal:56379/15 \
+      uv run python scripts/multi_process_reliability.py \
+        --redis-container apyra-test-redis --processes 8
 
 Each check prints ``PASS``/``FAIL``; the process exits non-zero on any failure.
 
@@ -20,6 +21,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import subprocess
 import sys
 from multiprocessing import Pool
 
@@ -134,8 +136,10 @@ def main() -> int:
 
     try:
         _verify_disposable_target(redis_url, args.redis_container, "redis")
-    except Exception as exc:  # noqa: BLE001 - fail closed without exposing subprocess output
-        parser.error(f"unsafe Redis test target: {type(exc).__name__}")
+    except ValueError as exc:
+        parser.error(f"unsafe Redis test target: {exc}")
+    except (subprocess.SubprocessError, OSError) as exc:
+        parser.error(f"could not verify Redis test target ({type(exc).__name__})")
     if args.processes < 2:
         parser.error("--processes must be at least 2")
 

@@ -27,6 +27,21 @@ from .repository import WorkflowRepository
 from .state import StepCallable, Workflow, WorkflowStatus, WorkflowStep
 
 
+def _handler_identity(handler: StepCallable) -> str:
+    """Return a stable callable identity suitable for persisted workflow validation."""
+    explicit_id = getattr(handler, "workflow_step_id", None)
+    if isinstance(explicit_id, str) and explicit_id:
+        return f"{type(handler).__module__}:{explicit_id}"
+
+    module = getattr(handler, "__module__", None)
+    qualified_name = getattr(handler, "__qualname__", None)
+    if not isinstance(module, str) or not isinstance(qualified_name, str):
+        handler_type = type(handler)
+        module = handler_type.__module__
+        qualified_name = handler_type.__qualname__
+    return f"{module}:{qualified_name}"
+
+
 class WorkflowEngine:
     """Execute workflows step by step with persistence."""
 
@@ -42,7 +57,10 @@ class WorkflowEngine:
         self._step_timeout_seconds = step_timeout_seconds
 
     async def start(self, workflow: Workflow, steps: Sequence[StepCallable]) -> Workflow:
-        workflow.steps = [WorkflowStep(name=f"step-{i}") for i, _ in enumerate(steps)]
+        workflow.steps = [
+            WorkflowStep(name=f"step-{index}", handler_id=_handler_identity(handler))
+            for index, handler in enumerate(steps)
+        ]
         await self._repository.create(workflow)
         await self._session.commit()
         await self.run(workflow, steps)
@@ -63,6 +81,11 @@ class WorkflowEngine:
             raise ValueError(f"workflow in {workflow.status.value} state cannot be resumed")
         if len(steps) != len(workflow.steps):
             raise ValueError("resume step sequence does not match persisted workflow steps")
+        persisted_handler_ids = [step.handler_id for step in workflow.steps]
+        if any(handler_id is None for handler_id in persisted_handler_ids):
+            raise ValueError("persisted workflow step identity is missing; refusing unsafe resume")
+        if [_handler_identity(handler) for handler in steps] != persisted_handler_ids:
+            raise ValueError("resume handler sequence does not match persisted workflow steps")
         if not 0 <= workflow.current_step <= len(workflow.steps):
             raise ValueError("persisted current_step is outside the workflow step sequence")
         if workflow.status == WorkflowStatus.FAILED:

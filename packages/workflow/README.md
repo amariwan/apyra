@@ -35,7 +35,9 @@ async def run_workflow(session: AsyncSession) -> None:
 Steps run sequentially and each completed step is committed before the next starts, so a
 crash never repeats a completed step. `WorkflowRepository.reconstruct` and
 `WorkflowEngine.resume` rebuild a workflow from storage and continue from the first
-incomplete step.
+incomplete step. Each workflow step persists the callable's module and qualified name; resume
+rejects a different handler sequence. Workflows created before handler identities were persisted
+cannot be resumed automatically and require operator reconciliation.
 
 Durability across multiple workers is **experimental**: the engine does not yet coordinate
 workers claiming the same workflow, and step handlers must be idempotent because a step that

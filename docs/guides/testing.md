@@ -30,6 +30,47 @@ devcontainer exec --workspace-folder . just docs-check
 
 ## Docker-backed test services
 
-PostgreSQL and Redis integration tests require real services. Start the project-owned services using
-the repository's documented container workflow and run the tests from the Devcontainer. A skipped
-service test is unverified; SQLite and mocks do not establish PostgreSQL or Redis guarantees.
+PostgreSQL and Redis integration tests require real services. From a host terminal with Docker
+running, create the dedicated persistent test volumes and labeled services:
+
+```bash
+docker volume create apyra-test-postgres-data
+docker volume create apyra-test-redis-data
+docker run --detach --name apyra-test-postgres \
+  --label apyra.release-test-service=postgres \
+  --env POSTGRES_USER=apyra --env POSTGRES_PASSWORD=apyra --env POSTGRES_DB=apyra_test \
+  --publish 127.0.0.1:55432:5432 \
+  --volume apyra-test-postgres-data:/var/lib/postgresql/data postgres:17
+docker run --detach --name apyra-test-redis \
+  --label apyra.release-test-service=redis \
+  --publish 127.0.0.1:56379:6379 \
+  --volume apyra-test-redis-data:/data redis:8-alpine redis-server --appendonly yes
+```
+
+Run the complete suite from the Devcontainer against the dedicated database and Redis database 15:
+
+```bash
+devcontainer exec --workspace-folder . env \
+  APYRA_TEST_POSTGRES_URL=postgresql+asyncpg://apyra:apyra@host.docker.internal:55432/apyra_test \
+  APYRA_TEST_POSTGRES_URL_SYNC=postgresql+psycopg://apyra:apyra@host.docker.internal:55432/apyra_test \
+  APYRA_TEST_REDIS_URL=redis://host.docker.internal:56379/15 \
+  just check
+```
+
+The Devcontainer CLI and Docker-compatible container engine are prerequisites. Its Docker-outside-
+of-Docker feature is required by the reliability scripts to verify service labels and port mappings.
+Only use that host-daemon access with trusted repository code. The suite clears Redis database 15
+and some PostgreSQL tests recreate tables, so use only the dedicated `apyra_test` database and Redis
+DB 15 shown above. Never point them at shared or production services. A skipped service test is
+unverified; SQLite and mocks do not establish PostgreSQL or Redis guarantees.
+
+Stop only the dedicated test containers when finished; the named volumes preserve test-service
+data for a later run:
+
+```bash
+docker stop apyra-test-postgres apyra-test-redis
+```
+
+Remove the two containers with `docker rm apyra-test-postgres apyra-test-redis` only when they are
+stopped and no longer needed. Remove their named volumes separately only when their contents may be
+discarded.

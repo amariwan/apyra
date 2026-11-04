@@ -54,6 +54,7 @@ def _verify_disposable_target(url: str, container: str, service: str) -> None:
         check=True,
         capture_output=True,
         text=True,
+        timeout=10,
     ).stdout.strip()
     if label != service:
         raise ValueError(f"{service} container is not labeled as a disposable Apyra test service")
@@ -64,6 +65,7 @@ def _verify_disposable_target(url: str, container: str, service: str) -> None:
         check=True,
         capture_output=True,
         text=True,
+        timeout=10,
     ).stdout.splitlines()
     mapped_ports = {line.rsplit(":", maxsplit=1)[-1].strip() for line in mappings}
     if parsed.port is None or str(parsed.port) not in mapped_ports:
@@ -76,6 +78,7 @@ def _restart(container: str, service: str, url: str, wait: float = 2.0) -> None:
         ["docker", "restart", container],  # noqa: S607
         check=True,
         capture_output=True,
+        timeout=90,
     )
     time.sleep(wait)
 

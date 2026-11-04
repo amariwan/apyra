@@ -135,6 +135,18 @@ jobs:
             uv build --package "apyra-${package}"
           done
           uv build --package apyra
+      - name: Generate and verify artifact manifest
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          manifest="dist/apyra-${RELEASE_VERSION}-manifest.json"
+          uv run --no-project --python 3.12 scripts/generate_manifest.py \
+            --dist dist --output "${manifest}"
+          python3 scripts/verify_artifact_manifest.py --manifest "${manifest}" --dist dist
+          if [ "${RELEASE_VERSION}" = "0.1.0" ]; then
+            python3 scripts/verify_artifact_manifest.py \
+              --manifest docs/audits/apyra-0.1.0-manifest.json --dist dist
+          fi
       - name: Attest build provenance
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
@@ -164,7 +176,16 @@ jobs:
         with:
           enable-cache: true
           python-version: "3.12"
-      - run: uv run --no-project --python 3.12 scripts/validate_release.py --dist dist
+      - name: Verify downloaded artifact manifest
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/verify_artifact_manifest.py \
+          --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json" --dist dist
+      - name: Validate downloaded release
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: uv run --no-project --python 3.12 scripts/validate_release.py \
+          --dist dist --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json"
 
   publish-core:
     needs: [validate, build]
@@ -185,6 +206,11 @@ jobs:
         with:
           name: release-distributions
           path: dist
+      - name: Verify downloaded artifact manifest
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/verify_artifact_manifest.py \
+          --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json" --dist dist
       - name: Stage core distribution
         run: |
           mkdir -p publish
@@ -279,6 +305,11 @@ jobs:
         with:
           name: release-distributions
           path: dist
+      - name: Verify downloaded artifact manifest
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/verify_artifact_manifest.py \
+          --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json" --dist dist
       - name: Stage package distribution
         env:
           PACKAGE: ${{ matrix.package }}
@@ -372,6 +403,11 @@ jobs:
         with:
           name: release-distributions
           path: dist
+      - name: Verify downloaded artifact manifest
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/verify_artifact_manifest.py \
+          --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json" --dist dist
       - name: Stage FastAPI distribution
         run: |
           mkdir -p publish
@@ -445,6 +481,11 @@ jobs:
         with:
           name: release-distributions
           path: dist
+      - name: Verify downloaded artifact manifest
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/verify_artifact_manifest.py \
+          --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json" --dist dist
       - name: Stage metapackage distribution
         run: |
           mkdir -p publish
@@ -533,6 +574,11 @@ jobs:
         with:
           name: release-distributions
           path: dist
+      - name: Verify downloaded artifact manifest
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/verify_artifact_manifest.py \
+          --manifest "dist/apyra-${RELEASE_VERSION}-manifest.json" --dist dist
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,13 +1,15 @@
+import asyncio
 import base64
 import json
+import os
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import cast
 
 import pytest
-from sqlalchemy import Date, DateTime, LargeBinary, Numeric, String, Uuid, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import Date, DateTime, LargeBinary, Numeric, String, Uuid, select, text, update
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apyra.db import (
@@ -44,6 +46,26 @@ class CompositeTenantItem(Base):
     tenant_id: Mapped[str] = mapped_column(String, primary_key=True)
     item_id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
+
+
+POSTGRES_URL = os.getenv(
+    "APYRA_TEST_POSTGRES_URL", "postgresql+asyncpg://apyra:apyra@localhost:5432/apyra_test"
+)
+
+
+def _postgres_available() -> bool:
+    async def check() -> bool:
+        engine = create_async_engine(POSTGRES_URL)
+        try:
+            async with engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
+            return True
+        except Exception:  # noqa: BLE001 - used to decide whether the integration test can run
+            return False
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(check())
 
 
 @pytest.mark.asyncio
@@ -128,6 +150,60 @@ async def test_tenant_scoped_repository_isolates_tenants() -> None:
             assert await repo_a.get({"tenant_id": "tenant-b", "item_id": "shared"}) is None
     finally:
         await manager.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.postgres
+@pytest.mark.skipif(not _postgres_available(), reason="PostgreSQL unavailable")
+async def test_tenant_owner_lock_blocks_concurrent_transfer() -> None:
+    engine = create_async_engine(POSTGRES_URL)
+    schema = f"tenant_lock_{uuid.uuid4().hex}"
+    try:
+        async with engine.begin() as connection:
+            await connection.exec_driver_sql(f'CREATE SCHEMA "{schema}"')
+            await connection.exec_driver_sql(f'SET search_path TO "{schema}"')
+            await connection.run_sync(Base.metadata.create_all)
+
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await session.execute(text(f'SET search_path TO "{schema}"'))
+            session.add(TenantItem(id="locked-row", name="before", tenant_id="tenant-a"))
+            await session.commit()
+
+        async with (
+            AsyncSession(engine, expire_on_commit=False) as owner_session,
+            AsyncSession(engine, expire_on_commit=False) as transfer_session,
+        ):
+            await owner_session.execute(text(f'SET search_path TO "{schema}"'))
+            await transfer_session.execute(text(f'SET search_path TO "{schema}"'))
+            repository = TenantScopedRepository(owner_session, TenantItem, "tenant-a")
+            instance = await repository.get("locked-row")
+            assert instance is not None
+            await repository.update(instance, name="updated")
+
+            async def transfer_ownership() -> None:
+                await transfer_session.execute(
+                    update(TenantItem)
+                    .where(TenantItem.id == "locked-row")
+                    .values(tenant_id="tenant-b")
+                    .execution_options(synchronize_session=False)
+                )
+
+            transfer = asyncio.create_task(transfer_ownership())
+            try:
+                await asyncio.sleep(0.1)
+                assert not transfer.done(), "tenant transfer bypassed the row ownership lock"
+                await owner_session.commit()
+                await asyncio.wait_for(transfer, timeout=5)
+                await transfer_session.commit()
+            finally:
+                if not transfer.done():
+                    transfer.cancel()
+                    with pytest.raises(asyncio.CancelledError):
+                        await transfer
+    finally:
+        async with engine.begin() as connection:
+            await connection.exec_driver_sql(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+        await engine.dispose()
 
 
 @pytest.mark.asyncio

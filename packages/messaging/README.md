@@ -33,7 +33,7 @@ Outbox uses `apyra-db` session management. Redis backend accepts explicit connec
 
 ## Public API
 
-Contracts: `MessageEnvelope`, `MessagePublisher`, `MessageConsumer`, `MessageHandler`, `DeliveryContext`, `RetryPolicy`, `DeadLetterPolicy`, `IdempotencyStore`, `AtomicIdempotencyStore`. Implementations: `ExponentialBackoff`, `RedisStreamsPublisher`, `RedisStreamsConsumer`, `InMemoryIdempotencyStore`, `RedisIdempotencyStore`, `PostgresIdempotencyStore`, and `ClaimResult`.
+Contracts: `MessageEnvelope`, `MessagePublisher`, `MessageConsumer`, `MessageHandler`, `DeliveryContext`, `RetryPolicy`, `DeadLetterPolicy`, `IdempotencyStore`, `AtomicIdempotencyStore`. Implementations: `ExponentialBackoff`, `RedisStreamsPublisher`, `RedisStreamsConsumer`, `InMemoryIdempotencyStore`, `RedisIdempotencyStore`, `PostgresIdempotencyStore`, `ClaimResult`, and `IdempotencyClaimLostError`.
 
 ## Delivery semantics
 
@@ -42,6 +42,8 @@ after the handler returns, and abandoned pending messages are recovered and re-p
 `RetryPolicy`, failed messages are retried with exponential backoff up to `max_attempts` and then
 sent to a dead-letter stream. Distributed idempotency stores (`RedisIdempotencyStore`,
 `PostgresIdempotencyStore`) provide atomic claim/complete semantics for duplicate suppression.
+Completing a claim after its owner lease expires or another worker takes it over raises
+`IdempotencyClaimLostError`; consumers leave the delivery unacknowledged so it can be reconciled.
 
 ## Error behavior
 

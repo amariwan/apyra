@@ -164,7 +164,7 @@ async def test_recover_pending_scans_past_recent_entries() -> None:
         group,
         "worker-a",
         _Handler(),
-        min_idle_ms=30,
+        min_idle_ms=1_000,
         recover_batch_size=1,
     )
     await consumer.ensure_group()
@@ -173,7 +173,7 @@ async def test_recover_pending_scans_past_recent_entries() -> None:
     )
     assert deliveries
     first_entry_id = deliveries[0][1][0][0]
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(1.2)
     # Refresh the first (lowest-ID) entry so it is too recent, while the later
     # entry remains eligible and would be starved by a first-page-only scan.
     await client.xclaim(stream, group, "worker-a", min_idle_time=0, message_ids=[first_entry_id])
@@ -185,7 +185,7 @@ async def test_recover_pending_scans_past_recent_entries() -> None:
         group,
         "worker-b",
         handler,
-        min_idle_ms=30,
+        min_idle_ms=1_000,
         recover_batch_size=1,
     )
     assert await recovering.recover_pending() == 0

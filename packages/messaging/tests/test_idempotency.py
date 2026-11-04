@@ -9,6 +9,7 @@ import pytest
 from apyra.messaging.contracts import DeliveryContext, MessageEnvelope
 from apyra.messaging.idempotency import (
     ClaimResult,
+    IdempotencyClaimLostError,
     InMemoryIdempotencyStore,
     PostgresIdempotencyStore,
     RedisIdempotencyStore,
@@ -78,6 +79,9 @@ async def test_in_memory_claim_can_be_released_after_failure() -> None:
     store = InMemoryIdempotencyStore()
     message_id = uuid.uuid4()
     assert await store.claim(message_id) is ClaimResult.CLAIMED
+    await store.release(message_id)
+    assert await store.claim(message_id) is ClaimResult.CLAIMED
+    assert await store.is_processed(message_id) is False
 
 
 async def test_attempt_record_failure_releases_acquired_claim() -> None:
@@ -124,7 +128,7 @@ async def test_redis_claim_remains_releasable_when_completion_fails() -> None:
         async def get(self, key: str) -> str | None:
             return self.values.get(key)
 
-        async def eval(self, script: str, key_count: int, key: str, expected: str) -> int:
+        async def eval(self, script: str, key_count: int, key: str, expected: str) -> int | str:
             if self.fail_next_eval:
                 self.fail_next_eval = False
                 raise RuntimeError("temporary Redis failure")
@@ -132,9 +136,10 @@ async def test_redis_claim_remains_releasable_when_completion_fails() -> None:
                 return 0
             if "redis.call('DEL'" in script:
                 del self.values[key]
+                return 1
             else:
                 self.values[key] = "done"
-            return 1
+                return "OK"
 
     client = Client()
     store = RedisIdempotencyStore(client)
@@ -145,6 +150,79 @@ async def test_redis_claim_remains_releasable_when_completion_fails() -> None:
 
     await store.release(message_id)
     assert await store.claim(message_id) is ClaimResult.CLAIMED
+
+
+async def test_redis_completion_rejects_a_claim_owned_by_another_worker() -> None:
+    class Client:
+        def __init__(self) -> None:
+            self.values: dict[str, str] = {}
+
+        async def set(self, key: str, value: str, **kwargs: object) -> bool:
+            if kwargs.get("nx") and key in self.values:
+                return False
+            self.values[key] = value
+            return True
+
+        async def get(self, key: str) -> str | None:
+            return self.values.get(key)
+
+        async def eval(self, script: str, key_count: int, key: str, expected: str) -> int | str:
+            if self.values.get(key) != expected:
+                return 0
+            self.values[key] = "done"
+            return "OK"
+
+    client = Client()
+    store = RedisIdempotencyStore(client)
+    message_id = uuid.uuid4()
+    assert await store.claim(message_id) is ClaimResult.CLAIMED
+    client.values[store._key(message_id)] = "processing:replacement-owner"
+
+    with pytest.raises(IdempotencyClaimLostError):
+        await store.complete(message_id)
+    assert await store.is_processed(message_id) is False
+
+
+async def test_consumer_continues_after_a_message_processing_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Client:
+        async def xgroup_create(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def xpending(self, *args: object, **kwargs: object) -> dict[str, object]:
+            return {"max": None}
+
+        async def xreadgroup(
+            self, **kwargs: object
+        ) -> list[tuple[str, list[tuple[str, dict[str, str]]]]]:
+            return [("stream", [("1-0", {}), ("2-0", {})])]
+
+    class Handler:
+        async def handle(self, envelope: MessageEnvelope, context: DeliveryContext) -> None:
+            pass
+
+    client = Client()
+    consumer = RedisStreamsConsumer(client, "stream", "group", "worker", Handler())
+    processed: list[str] = []
+
+    async def process(message_id: str, fields: object, attempt: int) -> str:
+        processed.append(message_id)
+        if message_id == "1-0":
+            raise IdempotencyClaimLostError("lost claim")
+        consumer.stop()
+        return "acked"
+
+    consumer._process = process  # type: ignore[method-assign]
+    await consumer.run()
+
+    assert processed == ["1-0", "2-0"]
+    assert any(
+        record.getMessage() == "message processing raised"
+        and getattr(record, "message_id", None) == "1-0"
+        and getattr(record, "error_type", None) == "IdempotencyClaimLostError"
+        for record in caplog.records
+    )
 
 
 @pytest.mark.asyncio
@@ -218,7 +296,7 @@ async def test_redis_claim_release_is_owned_by_the_claiming_task() -> None:
 async def test_postgres_idempotency_claim() -> None:
     from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-    from apyra.messaging.idempotency import IdempotencyRecord
+    from apyra.messaging.idempotency import IdempotencyClaimLostError, IdempotencyRecord
 
     engine = create_async_engine(POSTGRES_URL)
     async with engine.begin() as conn:
@@ -237,7 +315,9 @@ async def test_postgres_idempotency_claim() -> None:
 
     async with AsyncSession(engine, expire_on_commit=False) as session:
         store = PostgresIdempotencyStore(session)
-        await store.complete(message_id)
+        with pytest.raises(IdempotencyClaimLostError):
+            await store.complete(message_id)
+        await store.mark_processed(message_id)
         await session.commit()
 
     async with AsyncSession(engine, expire_on_commit=False) as session:

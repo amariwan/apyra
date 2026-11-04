@@ -28,9 +28,13 @@
   worker, plus poll/lease indexes and state-transition validation.
 - Add distributed idempotency stores (`RedisIdempotencyStore`, `PostgresIdempotencyStore`) with
   atomic claim/complete semantics, TTL expiration, duplicate detection, and crash recovery.
+- Raise `IdempotencyClaimLostError` if a worker completes a claim it no longer owns; the Redis
+  Streams consumer now isolates per-message processing errors and leaves failed deliveries for
+  recovery.
 - Persist per-step workflow state, add `WorkflowRepository.reconstruct`/`WorkflowEngine.resume`,
-  and add worker ownership and optimistic concurrency to `apyra-workflow`; multi-worker workflow
-  durability remains experimental.
+  persist stable step-handler identities, and reject changed sequences on resume. Add worker
+  ownership and optimistic concurrency to `apyra-workflow`; multi-worker workflow durability
+  remains experimental.
 - Add the additive 0.1.0 schema upgrade for existing outbox/workflow tables; see
   `docs/migrations/0.1.0-release-hardening.md`; PostgreSQL idempotency users apply the companion
   table-creation script there as well.

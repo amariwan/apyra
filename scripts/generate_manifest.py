@@ -7,7 +7,7 @@ matching the ``publish.yml`` dependency chain.
 Run after building::
 
     uv build --all-packages
-    uv run python scripts/generate_manifest.py --dist dist --output dist/apyra-0.1.0-manifest.json
+    uv run python scripts/generate_manifest.py --dist dist
 """
 
 from __future__ import annotations
@@ -15,10 +15,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+logger = logging.getLogger(__name__)
 
 # Publication phases, matching .github/workflows/publish.yml.
 _PUBLICATION_PHASES = [
@@ -111,8 +113,12 @@ def _build_manifest(dist: Path) -> dict[str, object]:
             }
         )
 
+    versions = {str(info["version"]) for info in metadata.values()}
+    if len(versions) != 1:
+        raise ValueError("all distributions must use the same release version")
+
     return {
-        "release": "0.1.0",
+        "release": versions.pop(),
         "distributions": packages,
         "publication_order": order,
         "trusted_publishing": {
@@ -129,11 +135,13 @@ def _build_manifest(dist: Path) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dist", type=Path, default=ROOT / "dist")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist" / "apyra-0.1.0-manifest.json")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     manifest = _build_manifest(args.dist)
-    args.output.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {args.output} ({len(manifest['distributions'])} distributions)")
+    output = args.output or args.dist / f"apyra-{manifest['release']}-manifest.json"
+    output.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logger.info("wrote %s (%d distributions)", output, len(_read_metadata()))
     return 0
 
 

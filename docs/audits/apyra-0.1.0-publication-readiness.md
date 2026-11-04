@@ -5,10 +5,12 @@ published.** This document is the authorization boundary: publication proceeds o
 after explicit maintainer approval and a protected tag push.
 
 Review update (2026-11-04): the current local worktree passed `just check` with isolated
-PostgreSQL/Redis services (652 passed, none skipped), all package type-completeness checks,
-multi-process reliability, migration integration, security scans, artifact build, and isolated
-release validation. The guarded restart harness is now part of the CI test job but has not run on
-this worktree. No publication has occurred.
+PostgreSQL/Redis services (662 passed, none skipped), Mypy, Pyright, Ruff, strict documentation
+checks, reproducible artifact-manifest verification, and isolated release validation. The
+multi-process reliability and restart fault-injection harnesses have not run on this worktree:
+the already-running Devcontainer lacks Docker CLI access; the new Docker-outside-of-Docker feature
+requires a container rebuild. Hosted CI for the updated PR head is pending. No publication has
+occurred.
 
 ---
 
@@ -117,11 +119,12 @@ PyPI does not permit overwriting a published file with different content:
 
 - [ ] All 20 distributions at a single version (`0.1.0`).
 - [x] `uv run ruff check .`, `ruff format --check .`, `mypy`, `pyright` pass.
-- [x] `just check` passes with Redis/PostgreSQL (652 passed, 0 skipped).
-- [x] Multi-process reliability passes with 8 processes.
+- [x] `just check` passes with Redis/PostgreSQL (662 passed, 0 skipped).
+- [ ] Multi-process reliability passes with 8 processes (not run in the current Devcontainer).
 - [x] PostgreSQL schema migration integration test passes for existing rows and all migration tables.
-- [x] `uv build --all-packages` produces 40 artifacts; the manifest is regenerated from them.
-- [x] `scripts/validate_release.py --dist dist` → RELEASE VALIDATION OK.
+- [x] Two `uv build --all-packages` runs produce matching 40-artifact manifests; the checked-in
+  manifest matches the current artifacts.
+- [x] Isolated `scripts/validate_release.py` passes with the bundled manifest (`RELEASE VALIDATION OK`).
 - [ ] Updated hosted CI passes, including the guarded restart harness.
 - [ ] `pypi-*` protections and trusted publishers independently verified.
 - [ ] Comprehensive secret scan completed (the local high-confidence pattern scan found no matches).

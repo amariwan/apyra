@@ -4,6 +4,9 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
   "workspaceFolder": "/workspaces/apyra",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/apyra,type=bind,consistency=cached",
   "remoteUser": "vscode",

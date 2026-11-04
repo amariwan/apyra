@@ -52,9 +52,11 @@ def test_fault_injection_requires_test_label_and_matching_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     commands: list[list[str]] = []
+    timeouts: list[object] = []
 
     def fake_run(command: list[str], **_: object) -> SimpleNamespace:
         commands.append(command)
+        timeouts.append(_.get("timeout"))
         if command[1] == "inspect":
             return SimpleNamespace(stdout="redis\n")
         return SimpleNamespace(stdout="127.0.0.1:56379\n")
@@ -66,3 +68,19 @@ def test_fault_injection_requires_test_label_and_matching_port(
         module._verify_disposable_target("redis://localhost:6379/15", "redis-test", "redis")
 
     assert len(commands) == 4
+    assert timeouts == [10, 10, 10, 10]
+
+
+def test_fault_injection_restart_has_a_bounded_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    timeouts: list[object] = []
+    monkeypatch.setattr(module, "_verify_disposable_target", lambda *args: None)
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        timeouts.append(kwargs.get("timeout"))
+        return SimpleNamespace(stdout="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+    monkeypatch.setattr(module.time, "sleep", lambda _: None)
+    module._restart("redis-test", "redis", "redis://localhost:56379/15")
+
+    assert timeouts == [90]

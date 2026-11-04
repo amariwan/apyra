@@ -230,15 +230,20 @@ def artifact_for_package(dist: Path, package: str, suffix: str) -> Path:
     return artifacts[0]
 
 
-def validate_artifact_set(dist: Path) -> None:
+def validate_artifact_set(dist: Path, manifest: Path | None = None) -> None:
     expected = {
         artifact_for_package(dist, package, suffix)
         for package in PACKAGES
         for suffix in (".whl", ".tar.gz")
     }
-    unexpected = sorted(
-        path.name for path in dist.iterdir() if path not in expected and path.name != ".gitignore"
-    )
+    allowed = expected | {dist / ".gitignore"}
+    if manifest is not None:
+        allowed.add(manifest)
+    if manifest is not None and (manifest.parent != dist or not manifest.is_file()):
+        raise FileNotFoundError(
+            "release manifest must be an existing file inside the dist directory"
+        )
+    unexpected = sorted(path.name for path in dist.iterdir() if path not in allowed)
     if unexpected:
         raise ValueError("Unexpected release artifacts: " + ", ".join(unexpected))
 
@@ -248,10 +253,15 @@ def main() -> int:
         description="Validate Apyra wheels and source distributions in isolated environments"
     )
     parser.add_argument("--dist", type=Path, default=DIST, help="Directory containing built wheels")
-    dist = parser.parse_args().dist.resolve()
+    parser.add_argument(
+        "--manifest", type=Path, help="Bundled release manifest verified against the artifacts"
+    )
+    args = parser.parse_args()
+    dist = args.dist.resolve()
     if not dist.is_dir():
         parser.error(f"wheel directory does not exist: {dist}")
-    validate_artifact_set(dist)
+    manifest = args.manifest.resolve() if args.manifest is not None else None
+    validate_artifact_set(dist, manifest)
 
     with tempfile.TemporaryDirectory(prefix="apyra-release-validate-") as temp_dir:
         root = Path(temp_dir)

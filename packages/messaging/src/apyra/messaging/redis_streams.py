@@ -503,7 +503,19 @@ class RedisStreamsConsumer:
                 for message_id, fields in messages:
                     if not self._running:
                         return
-                    await self._process(_decode(message_id), fields, attempt=1)
+                    decoded_message_id = _decode(message_id)
+                    try:
+                        await self._process(decoded_message_id, fields, attempt=1)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as exc:  # noqa: BLE001 - isolate failures per delivery
+                        logger.error(
+                            "message processing raised",
+                            extra={
+                                "message_id": decoded_message_id,
+                                "error_type": type(exc).__name__,
+                            },
+                        )
 
     def _record_metric(self, name: str, delta: int) -> None:
         if self._on_metric is not None:

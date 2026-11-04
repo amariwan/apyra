@@ -14,22 +14,24 @@ count alone. Statuses:
 | Lint | `uv run ruff check .` | PASS |
 | Format | `uv run ruff format --check .` | PASS |
 | Type check | `uv run mypy`, `uv run pyright`, package `--verifytypes` | PASS (100% all public packages) |
-| Tests | `just check` with isolated PostgreSQL 17 + Redis 8 | PASS (652 passed, 0 skipped) |
+| Tests | `just check` with isolated PostgreSQL 17 + Redis 8 | PASS (662 passed, 0 skipped) |
 | Package build | `uv build --all-packages` | PASS (20 wheels + 20 sdists) |
 | Isolated install | `uv run python scripts/validate_release.py --dist dist` | PASS (`RELEASE VALIDATION OK`) |
 | Schema upgrade | `tests/integration/test_release_schema_migration.py` | PASS (existing rows retained; outbox/workflow/idempotency schemas created) |
 | Security: Bandit | `uv run bandit -r packages -ll -q` | PASS (no medium/high findings) |
 | Security: pip-audit | `just audit` | PASS (no known third-party vulnerabilities; Apyra packages not on PyPI yet) |
 | Secret scan | local high-confidence key-pattern scan | No matches; comprehensive secret scanner NOT VERIFIED (`gitleaks` unavailable) |
-| Multi-process reliability | `scripts/multi_process_reliability.py --processes 8` | PASS (one refresh winner and one idempotency claimant) |
+| Multi-process reliability | `devcontainer exec --workspace-folder . env APYRA_TEST_REDIS_URL=redis://host.docker.internal:56379/15 uv run python scripts/multi_process_reliability.py --redis-container apyra-test-redis --processes 8` | NOT VERIFIED for the updated worktree; Docker CLI is missing in the running Devcontainer |
 | Fault injection | CI reliability step added; local invocation unavailable | NOT VERIFIED for current worktree; Devcontainer has no Docker CLI/socket |
 | Workflow lint | `actionlint .github/workflows/ci.yml .github/workflows/publish.yml` | PASS |
 | Documentation | `just docs-check` | PASS (strict build; pre-existing navigation/link notices remain) |
 
-## 2. Multi-process test results — **PASS locally**
+## 2. Multi-process test results — **NOT VERIFIED for the updated worktree**
 
-`scripts/multi_process_reliability.py` spawned eight real OS processes against a dedicated
-disposable Redis service. Both checks passed against the current worktree.
+The prior PR head passed this check, but the updated worktree has not been tested by the harness.
+Its Docker-container inspection cannot run in the already-running Devcontainer because that
+container lacks Docker CLI access. The configuration now enables Docker-outside-of-Docker for a
+rebuilt Devcontainer; do not treat the prior run as evidence for the current patch.
 
 | Check (8 processes) | Expected assertion |
 |---|---|
@@ -50,9 +52,10 @@ claim of end-to-end exactly-once delivery.
 | Message redelivery / DLQ | PASS in Redis integration tests, including malformed and exhausted messages. |
 | Worker kill/restart, connection interruption, workflow cancellation mid-run | NOT VERIFIED. |
 
-The current GitHub Actions run predates the latest local changes and failed type completeness in
-the messaging/observability/workflow packages. Those issues now pass locally; no updated hosted run
-has been observed because this worktree has not been pushed.
+The GitHub Actions run for commit `a58249c` passed all required PR checks, including tests on Python
+3.12 and 3.13, type checking, install smoke, security, docs, and the required-check aggregator. That
+run predates this review-fix patch; updated hosted CI is pending. The restart fault-injection harness
+is not executed on pull requests; the hosted reliability step is part of the release workflow.
 
 ## 4. Security audit findings — current local scans
 
@@ -83,10 +86,11 @@ throughput claims.
 
 ## 6. Artifact integrity
 
-- `uv build --all-packages` reproduces 40 artifacts (20 wheels + 20 sdists).
-- SHA-256 digests were regenerated from the current 40 artifacts in
-  `docs/audits/apyra-0.1.0-manifest.json`; `scripts/check_pypi_artifacts.py` compares local vs
-  published digests at publish time.
+- Two `uv build --all-packages` runs reproduced identical manifests for 40 artifacts (20 wheels +
+  20 sdists). `docs/audits/apyra-0.1.0-manifest.json` now contains the current hashes.
+- The publish workflow generates and bundles a manifest from those exact CI artifacts, verifies
+  it after every download, and publishes only staged wheel/sdist files. `scripts/check_pypi_artifacts.py`
+  compares local vs published digests at publish time.
 
 ## 7. Package/version compatibility — **PASS**
 

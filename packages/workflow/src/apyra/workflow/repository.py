@@ -17,6 +17,7 @@ from .state import Workflow, WorkflowStatus, WorkflowStep
 def _serialize_step(step: WorkflowStep) -> dict[str, Any]:
     return {
         "name": step.name,
+        "handler_id": step.handler_id,
         "status": step.status.value,
         "result": step.result,
         "error": step.error,
@@ -28,6 +29,7 @@ def _serialize_step(step: WorkflowStep) -> dict[str, Any]:
 def _deserialize_step(data: dict[str, Any]) -> WorkflowStep:
     return WorkflowStep(
         name=data.get("name", ""),
+        handler_id=data.get("handler_id"),
         status=WorkflowStatus(data.get("status", WorkflowStatus.PENDING.value)),
         result=data.get("result"),
         error=data.get("error"),

@@ -80,11 +80,24 @@ Recommended environment protections:
    actionlint .github/workflows/ci.yml .github/workflows/publish.yml
    ```
 
-7. Run `scripts/multi_process_reliability.py --processes 8` against isolated test services. Run
-   `scripts/fault_injection.py --redis-container <labeled-test-redis>
-   --postgres-container <labeled-test-postgres>` only against disposable local containers labeled
-   `apyra.release-test-service=redis` and `apyra.release-test-service=postgres`. The script verifies
-   the labels, local endpoints, test database, and published ports before restarting anything.
+7. Start the isolated services described in the [testing guide](../guides/testing.md), then run
+   the reliability scripts from the Docker-enabled Devcontainer:
+
+   ```bash
+   devcontainer exec --workspace-folder . env \
+     APYRA_TEST_REDIS_URL=redis://host.docker.internal:56379/15 \
+     uv run python scripts/multi_process_reliability.py \
+       --redis-container apyra-test-redis --processes 8
+   devcontainer exec --workspace-folder . env \
+     APYRA_TEST_REDIS_URL=redis://host.docker.internal:56379/15 \
+     APYRA_TEST_POSTGRES_URL=postgresql+asyncpg://apyra:apyra@host.docker.internal:55432/apyra_test \
+     uv run python scripts/fault_injection.py \
+       --redis-container apyra-test-redis --postgres-container apyra-test-postgres
+   ```
+
+   The scripts require containers labeled `apyra.release-test-service=redis` and
+   `apyra.release-test-service=postgres`; they verify labels, local endpoints, test database, and
+   published ports before running Redis tests or restarting a service.
 
 ## Release execution
 

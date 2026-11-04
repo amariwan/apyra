@@ -108,6 +108,34 @@ def test_quality_matrix_keeps_both_supported_python_versions() -> None:
     ]
 
 
+def test_publish_workflow_binds_downloaded_artifacts_to_a_manifest() -> None:
+    workflow = _load_yaml(PUBLISH_WORKFLOW)
+    jobs = workflow["jobs"]
+    build = jobs["build"]
+    build_steps = build["steps"]
+    manifest_step = next(
+        step for step in build_steps if step.get("name") == "Generate and verify artifact manifest"
+    )
+    assert "scripts/generate_manifest.py" in manifest_step["run"]
+    assert "docs/audits/apyra-0.1.0-manifest.json" in manifest_step["run"]
+
+    publication_jobs = (
+        "validate",
+        "publish-core",
+        "publish-leaf",
+        "publish-fastapi",
+        "publish-meta",
+        "github-release",
+    )
+    for job_name in publication_jobs:
+        steps = jobs[job_name]["steps"]
+        verify_step = next(
+            step for step in steps if step.get("name") == "Verify downloaded artifact manifest"
+        )
+        assert "scripts/verify_artifact_manifest.py" in verify_step["run"]
+        assert "dist/apyra-${RELEASE_VERSION}-manifest.json" in verify_step["run"]
+
+
 def test_documentation_only_changes_run_the_strict_docs_gate() -> None:
     ci_workflow = _load_yaml(CI_WORKFLOW)
     changes = ci_workflow["jobs"]["changes"]

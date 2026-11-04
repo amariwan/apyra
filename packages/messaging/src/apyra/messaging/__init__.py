@@ -15,6 +15,7 @@ from .contracts import (
 from .idempotency import (
     AtomicIdempotencyStore,
     ClaimResult,
+    IdempotencyClaimLostError,
     InMemoryIdempotencyStore,
     PostgresIdempotencyStore,
     RedisIdempotencyStore,
@@ -28,6 +29,7 @@ __all__ = [
     "DeadLetterPolicy",
     "DeliveryContext",
     "ExponentialBackoff",
+    "IdempotencyClaimLostError",
     "IdempotencyStore",
     "InMemoryIdempotencyStore",
     "MessageConsumer",

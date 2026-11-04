@@ -116,11 +116,23 @@ async def test_resume_retries_failed_step_and_keeps_completed_work() -> None:
             raise RuntimeError("temporary")
         return "second-result"
 
+    async def replacement_step(current: Workflow) -> str:
+        return "wrong-result"
+
     async with AsyncSession(engine, expire_on_commit=False) as session:
         await WorkflowEngine(session, max_step_attempts=1).start(
             workflow, [first_step, failing_once]
         )
         assert workflow.status == WorkflowStatus.FAILED
+
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        with pytest.raises(ValueError, match="handler sequence"):
+            await WorkflowEngine(session).resume(
+                workflow.workflow_id, [first_step, replacement_step]
+            )
+        record = await WorkflowRepository(session).get(workflow.workflow_id)
+        assert record is not None
+        assert record.status == WorkflowStatus.FAILED.value
 
     async with AsyncSession(engine, expire_on_commit=False) as session:
         resumed = await WorkflowEngine(session).resume(

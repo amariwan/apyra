@@ -49,21 +49,29 @@ comprehensive secret scan.
 ## Validation evidence
 
 - `just check` with isolated Redis 8/PostgreSQL 17 services: Ruff, format, Mypy, Pyright passed;
-  652 tests passed, 0 skipped.
+  662 tests passed, 0 skipped.
 - Logging audit verification: `git diff --check` passed; focused package/import checks passed;
 - Service-backed Redis/PostgreSQL integration tests and the PostgreSQL schema migration test passed.
-- `scripts/multi_process_reliability.py --processes 8`: PASS, one refresh winner and one idempotency
-  claimant.
-- `uv build --all-packages`: 20 wheels and 20 source distributions built; the artifact manifest was
-  regenerated from the current build.
-- `scripts/validate_release.py --dist dist`: `RELEASE VALIDATION OK`.
+- Multi-process reliability passed on the previous PR head. It remains unverified for this patch
+  because the already-running Devcontainer has no Docker CLI; the updated Devcontainer config
+  enables Docker-outside-of-Docker after a rebuild. Reproduce with:
+
+  ```bash
+  devcontainer exec --workspace-folder . env \
+    APYRA_TEST_REDIS_URL=redis://host.docker.internal:56379/15 \
+    uv run python scripts/multi_process_reliability.py \
+      --redis-container apyra-test-redis --processes 8
+  ```
+- Two `uv build --all-packages` runs produced matching manifests for 20 wheels and 20 source
+  distributions; `docs/audits/apyra-0.1.0-manifest.json` matches the current artifacts.
+- Isolated `scripts/validate_release.py` with its bundled manifest: `RELEASE VALIDATION OK`.
 - `just docs-check`: documentation tests and strict MkDocs build passed.
 - `just audit` and Bandit passed; pip-audit found no known vulnerabilities in
   third-party dependencies (Apyra's unpublished distributions are not auditable on PyPI).
 - A local high-confidence secret-pattern scan found no matches; a comprehensive scanner is
   unavailable.
-- GitHub Actions on the previous worktree failed package type completeness; all packages now pass
-  local `pyright --verifytypes` at 100%. No updated hosted run has been observed.
+- All 19 public package modules pass `pyright --verifytypes` at 100%. The metapackage does not
+  provide a typed namespace module. Updated hosted CI for this patch has not run yet.
 - Guarded restart fault injection is in CI but could not run locally because the Devcontainer has
   no Docker CLI/socket.
 

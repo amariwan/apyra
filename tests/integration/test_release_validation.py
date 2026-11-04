@@ -8,6 +8,8 @@ from pathlib import Path
 from runpy import run_path
 from typing import cast
 
+import pytest
+
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "validate_release.py"
 PACKAGES = cast(list[str], run_path(str(SCRIPT))["PACKAGES"])
 
@@ -37,6 +39,21 @@ def test_release_validator_rejects_unexpected_artifacts(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "Unexpected release artifacts" in result.stderr
+
+
+def test_release_validator_allows_only_a_bundled_manifest(tmp_path: Path) -> None:
+    _write_artifact_placeholders(tmp_path)
+    manifest = tmp_path / "apyra-0.1.0-manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+    namespace = run_path(str(SCRIPT))
+    validate_artifact_set = cast(
+        Callable[[Path, Path | None], None], namespace["validate_artifact_set"]
+    )
+
+    validate_artifact_set(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="Unexpected release artifacts"):
+        validate_artifact_set(tmp_path, None)
 
 
 def test_release_validator_rejects_missing_artifacts(tmp_path: Path) -> None:

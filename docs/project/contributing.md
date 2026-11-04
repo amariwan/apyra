@@ -4,10 +4,16 @@
 
 Use the Devcontainer for local development, dependency management, builds, and tests. Keep
 project-specific Python packages, virtual environments, and development services off the macOS host.
+Before starting, install and start Docker Desktop or another Docker-compatible container engine,
+and install the [Dev Container CLI](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli).
+The CLI's npm installation requires Node.js and a C/C++ build toolchain. The Devcontainer's
+Docker-outside-of-Docker feature exposes the host Docker daemon so the isolated reliability harness
+can verify its labeled test containers; only use this Devcontainer with trusted repository code.
 
 ```bash
 git clone https://github.com/amariwan/apyra.git
 cd apyra
+npm install -g @devcontainers/cli
 devcontainer up --workspace-folder .
 devcontainer exec --workspace-folder . uv sync --all-packages --all-extras
 ```
