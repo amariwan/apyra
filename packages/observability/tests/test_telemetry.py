@@ -32,6 +32,7 @@ def test_span_records() -> None:
 
 
 def test_sqlalchemy_instrumentability_matches_installed_version() -> None:
+    pytest.importorskip("sqlalchemy")
     import importlib.metadata
 
     version = importlib.metadata.version("sqlalchemy")

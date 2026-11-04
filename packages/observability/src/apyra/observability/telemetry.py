@@ -9,7 +9,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any, cast
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 try:
     from opentelemetry import trace

@@ -20,6 +20,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 try:  # pragma: no cover - exercised only when SQLAlchemy is installed
     from apyra.db.base import Base, TimestampMixin
@@ -44,7 +45,7 @@ try:  # pragma: no cover - exercised only when SQLAlchemy is installed
         """Persisted outbox record for at-least-once delivery."""
 
         __tablename__ = "apyra_outbox"
-        __table_args__ = (
+        __table_args__: tuple[Index, ...] = (
             Index("ix_apyra_outbox_poll", "status", "next_attempt_at"),
             Index("ix_apyra_outbox_lease", "status", "lease_expires_at"),
         )
@@ -72,7 +73,7 @@ try:  # pragma: no cover - exercised only when SQLAlchemy is installed
             Integer, nullable=False, default=0, server_default="0"
         )
 
-        __mapper_args__ = {"version_id_col": version_id}  # noqa: RUF012
+        __mapper_args__: dict[str, Any] = {"version_id_col": version_id}  # noqa: RUF012
 
     class OutboxRepository:
         """Repository for claiming and updating outbox messages."""

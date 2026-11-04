@@ -7,8 +7,7 @@ process boundaries.
 Run (requires Redis + PostgreSQL)::
 
     APYRA_TEST_REDIS_URL=redis://localhost:6379/15 \
-    APYRA_TEST_POSTGRES_URL=postgresql+asyncpg://user:pass@localhost:5432/db \
-    uv run python scripts/multi_process_reliability.py --processes 8
+uv run python scripts/multi_process_reliability.py --redis-container apyra-test-redis --processes 8
 
 Each check prints ``PASS``/``FAIL``; the process exits non-zero on any failure.
 
@@ -34,7 +33,6 @@ def _issue_pair() -> tuple[str, str]:
         os.environ.get("APYRA_TEST_REDIS_URL", "redis://localhost:6379/15"),
         decode_responses=True,
     )
-    client.flushdb()
     settings = AuthSettings(
         mode="hs",
         hs_secret=SecretStr("multi-process-secret-with-at-least-32-bytes"),
@@ -126,7 +124,20 @@ def check_concurrent_idempotency(processes: int) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--processes", type=int, default=8)
+    parser.add_argument("--redis-container", required=True)
     args = parser.parse_args()
+
+    redis_url = os.environ.get("APYRA_TEST_REDIS_URL")
+    if redis_url is None:
+        parser.error("APYRA_TEST_REDIS_URL must target a disposable test service")
+    from fault_injection import _verify_disposable_target
+
+    try:
+        _verify_disposable_target(redis_url, args.redis_container, "redis")
+    except Exception as exc:  # noqa: BLE001 - fail closed without exposing subprocess output
+        parser.error(f"unsafe Redis test target: {type(exc).__name__}")
+    if args.processes < 2:
+        parser.error("--processes must be at least 2")
 
     checks = [
         check_concurrent_refresh(args.processes),

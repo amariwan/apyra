@@ -13,9 +13,9 @@ REDIS_URL = os.getenv("APYRA_TEST_REDIS_URL", "redis://localhost:6379/15")
 
 
 def _redis_available() -> bool:
-    import redis
-
     try:
+        import redis
+
         client = redis.Redis.from_url(REDIS_URL)
         client.ping()
         client.close()
@@ -91,6 +91,8 @@ def test_redis_token_service_rotation_and_reuse_detection() -> None:
 
         with pytest.raises(AuthenticationError, match="token_reuse_detected"):
             service.rotate_refresh_token(pair.refresh_token)
+        with pytest.raises(AuthenticationError, match="token_revoked"):
+            service.verify_access_token(rotated.access_token)
     finally:
         client.flushdb()
         client.close()
@@ -106,6 +108,27 @@ def test_redis_token_revocation_until_expiry() -> None:
         future = time.time() + 60
         store.revoke("jti-timed", expires_at=future)
         assert store.is_revoked("jti-timed") is True
+    finally:
+        client.flushdb()
+        client.close()
+
+
+def test_redis_family_revocation_keeps_latest_expiry() -> None:
+    import redis
+
+    client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+    client.flushdb()
+    store = RedisRevocationStore(client)
+    family_id = "family-latest-expiry"
+    try:
+        latest_expiry = time.time() + 300
+        store.register_family_token_expiration(family_id, latest_expiry)
+        store.revoke_family_until(family_id, time.time() + 60)
+        assert store.is_family_revoked(family_id)
+        assert client.ttl(store._family_key(family_id)) > 200
+
+        store.register_family_token_expiration(family_id, time.time() + 600)
+        assert client.ttl(store._family_key(family_id)) > 500
     finally:
         client.flushdb()
         client.close()

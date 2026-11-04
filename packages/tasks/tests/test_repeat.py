@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import math
 import threading
 from collections.abc import Awaitable, Callable
@@ -67,6 +68,24 @@ async def test_repeat_every_handles_exceptions() -> None:
     await handle
     assert calls == [1, 2]
     assert errors == ["boom", "boom"]
+
+
+@pytest.mark.asyncio
+async def test_repeat_every_logs_unhandled_callback_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    @repeat_every(seconds=0.01, max_repetitions=1, return_task_handle=True)
+    async def task() -> None:
+        raise RuntimeError("boom")
+
+    with caplog.at_level(logging.ERROR, logger="apyra.tasks.repeat"):
+        handle = await task()
+        await handle
+
+    (record,) = caplog.records
+    assert record.name == "apyra.tasks.repeat"
+    assert record.getMessage() == "Repeated task failed"
+    assert record.exc_info is not None
 
 
 @pytest.mark.asyncio

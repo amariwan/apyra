@@ -4,13 +4,19 @@ Preparation record for the first public release. **No packages have been
 published.** This document is the authorization boundary: publication proceeds only
 after explicit maintainer approval and a protected tag push.
 
+Review update (2026-11-04): the current local worktree passed `just check` with isolated
+PostgreSQL/Redis services (652 passed, none skipped), all package type-completeness checks,
+multi-process reliability, migration integration, security scans, artifact build, and isolated
+release validation. The guarded restart harness is now part of the CI test job but has not run on
+this worktree. No publication has occurred.
+
 ---
 
 ## 1. Complete package matrix
 
-All 20 distributions report version `0.1.0`. Names are available on PyPI
-(sampled: `apyra`, `apyra-core`, `apyra-fastapi`, `apyra-db`, `apyra-auth` → HTTP 404,
-i.e. unclaimed).
+All 20 distributions report version `0.1.0`. Five names were checked on PyPI
+(`apyra`, `apyra-core`, `apyra-fastapi`, `apyra-db`, `apyra-auth` → HTTP 404,
+i.e. unclaimed). Re-check all 20 names immediately before the first publish.
 
 | Distribution | PyPI name | GitHub environment | Phase |
 |---|---|---|---|
@@ -37,8 +43,9 @@ i.e. unclaimed).
 
 ## 2. PyPI publisher readiness
 
-- Trusted Publishing (`id-token: write`) is configured per distribution behind the
-  `pypi-*` environments listed above.
+- Trusted Publishing (`id-token: write`) is implemented per distribution behind the
+  `pypi-*` environments listed above; actual provider/environment settings were not independently
+  verified in this review.
 - Environments should require review for production releases and restrict
   deployment to `main`/release tags (per `docs/release/runbook.md`).
 - No long-lived PyPI API tokens are used.
@@ -92,6 +99,9 @@ Manual `workflow_dispatch` defaults to `publish=false` (dry validation build);
   streaming cost).
 - Broader performance matrix beyond the JSON microbenchmark not recorded.
 - Worker kill/restart and mid-run workflow-cancellation fault injection not exercised.
+- No Apyra-managed Alembic environment or migration runner is implemented. A versioned SQL upgrade
+  covers existing outbox/workflow schemas and the PostgreSQL idempotency table; PostgreSQL
+  integration tests apply the scripts to pre-upgrade schemas.
 
 ## 8. Recovery procedure for partial publication
 
@@ -106,11 +116,15 @@ PyPI does not permit overwriting a published file with different content:
 ## 9. Release approval checklist
 
 - [ ] All 20 distributions at a single version (`0.1.0`).
-- [ ] `uv run ruff check .`, `ruff format --check .`, `mypy`, `pyright` pass.
-- [ ] `uv run pytest` passes (631 tests, Redis 8 + PostgreSQL 17).
-- [ ] `uv build --all-packages` produces 40 artifacts matching the manifest hashes.
-- [ ] `scripts/validate_release.py --dist dist` → RELEASE VALIDATION OK.
-- [ ] `pypi-*` environments configured with required reviewers.
+- [x] `uv run ruff check .`, `ruff format --check .`, `mypy`, `pyright` pass.
+- [x] `just check` passes with Redis/PostgreSQL (652 passed, 0 skipped).
+- [x] Multi-process reliability passes with 8 processes.
+- [x] PostgreSQL schema migration integration test passes for existing rows and all migration tables.
+- [x] `uv build --all-packages` produces 40 artifacts; the manifest is regenerated from them.
+- [x] `scripts/validate_release.py --dist dist` → RELEASE VALIDATION OK.
+- [ ] Updated hosted CI passes, including the guarded restart harness.
+- [ ] `pypi-*` protections and trusted publishers independently verified.
+- [ ] Comprehensive secret scan completed (the local high-confidence pattern scan found no matches).
 - [ ] Maintainer approval recorded.
 - [ ] Push `v0.1.0` tag (or manual dispatch with `publish=true`).
 

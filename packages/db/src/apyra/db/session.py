@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import warnings
 from asyncio import AbstractEventLoop, get_running_loop
 from collections.abc import AsyncGenerator, Awaitable
 from typing import cast
@@ -28,14 +29,33 @@ class DatabaseSessionManager:
     running event loop changes. Call :meth:`close` during application shutdown.
     """
 
-    def __init__(self, url: str, engine_kwargs: dict[str, object] | None = None) -> None:
+    def __init__(
+        self,
+        url: str | None = None,
+        engine_kwargs: dict[str, object] | None = None,
+        *,
+        host: str | None = None,
+    ) -> None:
         """Create a session manager for the given SQLAlchemy database URL.
 
         ``url`` is a full SQLAlchemy connection string (for example
         ``postgresql+asyncpg://user:pass@host/db`` or ``sqlite+aiosqlite:///./app.db``),
         not a bare host name.
+
+        ``host`` is a deprecated keyword alias for ``url``.
         """
-        self._url = url
+        if url is not None and host is not None:
+            raise TypeError("pass either 'url' or the deprecated 'host' alias, not both")
+        resolved_url = url if url is not None else host
+        if resolved_url is None:
+            raise TypeError("missing required database URL argument: 'url'")
+        if host is not None:
+            warnings.warn(
+                "'host' is deprecated; pass the full connection string as 'url' instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._url = resolved_url
         self._engine_kwargs = dict(engine_kwargs or {})
         engine, sessionmaker = self._new_engine()
         self._engine: AsyncEngine | None = engine

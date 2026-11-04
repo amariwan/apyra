@@ -32,9 +32,11 @@ new engine per request.
 ## Schema lifecycle
 
 `ensure_db_schema` and SQLAlchemy `create_all` are suitable for controlled tests and small examples.
-Production schema evolution should use reviewed migrations through the `migrations` extra. The
-enterprise reference application currently uses startup schema creation; that is an example
-constraint, not a general production recommendation.
+Production schema evolution should use reviewed migrations. The `migrations` extra installs
+Alembic, but Apyra does not yet ship an Alembic environment or migration runner; apply the
+versioned scripts in `docs/migrations/` through your chosen migration system. The enterprise
+reference application currently uses startup schema creation; that is an example constraint, not a
+general production recommendation.
 
 Integration behavior must be tested against the real selected database. SQLite success does not
 verify PostgreSQL locks, concurrency, or transaction semantics.

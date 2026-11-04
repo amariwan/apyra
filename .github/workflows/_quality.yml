@@ -98,6 +98,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
+          --label apyra.release-test-service=postgres
           --health-cmd "pg_isready -U apyra -d apyra_test"
           --health-interval 10s
           --health-timeout 5s
@@ -107,6 +108,7 @@ jobs:
         ports:
           - 6379:6379
         options: >-
+          --label apyra.release-test-service=redis
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
@@ -149,6 +151,20 @@ jobs:
               check=True,
           )
           PY
+      - name: Reliability harness
+        if: inputs.python-version == '3.12'
+        env:
+          PYTHON_VERSION: ${{ inputs.python-version }}
+        run: |
+          redis_container="$(docker ps --filter label=apyra.release-test-service=redis --format '{{.Names}}')"
+          postgres_container="$(docker ps --filter label=apyra.release-test-service=postgres --format '{{.Names}}')"
+          test -n "${redis_container}"
+          test -n "${postgres_container}"
+          uv run --no-sync --python "${PYTHON_VERSION}" python scripts/multi_process_reliability.py \
+            --redis-container "${redis_container}" --processes 8
+          uv run --no-sync --python "${PYTHON_VERSION}" python scripts/fault_injection.py \
+            --redis-container "${redis_container}" \
+            --postgres-container "${postgres_container}"
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

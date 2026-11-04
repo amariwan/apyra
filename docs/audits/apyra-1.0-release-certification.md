@@ -1,5 +1,10 @@
 # APYRA 1.0 — Release Certification
 
+> Historical certification for commit `721e9c9`. The 2026-11-04 PR review changed
+> code covered by this record. Current local validation and remaining service-backed
+> checks are recorded in `apyra-final-release-gate.md`; this earlier result set does
+> not certify the reviewed patch.
+
 Generated during the P6 release-certification pass. Statuses use an explicit
 **PASS / FAIL / NOT VERIFIED / EXPERIMENTAL** vocabulary. Each section records the
 evidence behind its status; nothing is claimed based solely on the unit-test count.
@@ -57,7 +62,7 @@ against raw SQL, ad-hoc queries, or a non-scoped `Repository` used against a
 tenant-model — applications must use the scoped repository for tenant-protected
 data. This is documented, not silently assumed.
 
-## 4. Multi-worker test results — **PASS** (concurrency; process harness NOT VERIFIED)
+## 4. Multi-worker test results — **HISTORICAL**
 
 Verified against real Redis 8 and PostgreSQL 17:
 
@@ -71,11 +76,9 @@ Verified against real Redis 8 and PostgreSQL 17:
 | Abandoned Redis Streams message recovery | re-processed |
 | Dead-letter after retry exhaustion | moved to DLQ, source removed |
 
-A dedicated multi-OS-process stress harness (spawning N separate Python processes
-against shared infrastructure) was **not** built; the atomicity guarantees were
-verified under concurrent clients (threads/tasks) whose Redis/PostgreSQL atomic
-primitives are process-independent. This is marked **NOT VERIFIED** for literal
-multi-process orchestration.
+A multi-OS-process stress harness was added in this PR, but it was not executed
+during the 2026-11-04 review because the Apyra Redis/PostgreSQL test services were
+unavailable. Multi-process orchestration is **NOT VERIFIED** for the reviewed patch.
 
 ## 5. Benchmark methodology and results
 
@@ -127,26 +130,25 @@ VALIDATION OK**.
 ## 10. Known limitations
 
 - Tenant isolation is repository-level only (see §3 boundary).
-- Refresh-token family revocation on reuse is best-effort (non-atomic) in the Redis
-  store; the consume step itself is atomic, which is what prevents double-rotation.
-- No formal multi-process stress harness or live fault-injection run against a
-  running deployment was executed in this pass.
+- Refresh-token family revocation on reuse is now part of the same Redis Lua
+  operation as token consumption; the reviewed change still requires a Redis-backed
+  test run.
+- The multi-process and Redis/PostgreSQL restart harnesses exist but were not run
+  during review because their services were unavailable.
 
 ## 11. Release blockers
 
-None confirmed. The following are recorded as **NOT VERIFIED** rather than passed:
+Release readiness is **NOT VERIFIED** for the reviewed patch. The following remain
+open rather than passed:
 
-- Literal multi-OS-process worker stress (§4).
-- Controlled infra fault injection against a live deployment (P6.6): Redis/Postgres
-  restart, transaction rollback, and redelivery were exercised at the
-  integration-test level, but not as a running-service kill/restart harness.
+- Redis/PostgreSQL integration tests, including multi-process stress (§4).
+- Controlled Redis/PostgreSQL restart fault injection (P6.6).
+- A reviewed migration path for existing outbox/workflow schemas; no migration
+  runner is implemented yet.
 
-## 12. Readiness assessment — **PASS (with stated NOT VERIFIED gaps)**
+## 12. Readiness assessment — **NOT VERIFIED for the reviewed patch**
 
-Apyra is engineering-complete and externally consumable: 631 tests pass against
-real Redis 8 and PostgreSQL 17; Ruff/Mypy/Pyright clean; all 20 distributions build
-and install in isolation; generated applications run independently; a confirmed
-concurrent-refresh security defect was found and fixed during this pass. The
-release is **not** published. Before public release, maintainers should either run
-the two `NOT VERIFIED` items above (multi-process stress and live fault injection)
-or explicitly accept their absence.
+The reviewed patch passed local Ruff, formatting, Mypy, Pyright, package build, and
+isolated release validation. Its full local test run passed 613 tests and skipped 28
+Redis/PostgreSQL tests because those services were unavailable. The release is
+**not** published. Re-run the service-backed checks before approval.

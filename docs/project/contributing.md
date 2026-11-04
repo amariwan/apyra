@@ -1,33 +1,34 @@
 # Contributing
 
-## Development setup
+## Required development environment
 
-Native development is the default. No Docker or Devcontainer is required:
+Use the Devcontainer for local development, dependency management, builds, and tests. Keep
+project-specific Python packages, virtual environments, and development services off the macOS host.
 
 ```bash
 git clone https://github.com/amariwan/apyra.git
 cd apyra
-uv sync --all-packages --all-extras
-```
-
-Keep changes scoped and preserve the package dependency direction. In particular, `apyra-core` must
-not depend on FastAPI or infrastructure packages, and the PEP 420 namespace must not gain an
-`apyra/__init__.py`.
-
-### Optional: Devcontainer
-
-For a reproducible, isolated development environment, you can use the optional Devcontainer:
-
-```bash
 devcontainer up --workspace-folder .
 devcontainer exec --workspace-folder . uv sync --all-packages --all-extras
+```
+
+Before coding, read the repository `AGENTS.md` and the mandatory
+[Engineering Standards](engineering-standards.md). Preserve the package dependency direction. In
+particular, `apyra-core` must not depend on FastAPI or infrastructure packages, and the PEP 420
+namespace must not gain an `apyra/__init__.py`.
+
+To run commands in the open Devcontainer:
+
+```bash
+devcontainer exec --workspace-folder . just check
+devcontainer exec --workspace-folder . just docs-check
 ```
 
 ## Required checks
 
 ```bash
-just check
-just docs-check
+devcontainer exec --workspace-folder . just check
+devcontainer exec --workspace-folder . just docs-check
 ```
 
 Run real PostgreSQL/Redis integration tests for affected infrastructure. Add tests before behavior

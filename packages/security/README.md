@@ -41,16 +41,25 @@ No central settings; functions accept explicit parameters.
 
 ## Multi-tenancy
 
-`apyra-security` provides the tenant *context* primitives; combine them with
-`TenantScopedMixin` and `TenantScopedRepository` from `apyra-db` for fail-closed,
-tenant-scoped data access:
+`apyra-security` provides tenant context primitives. Resolve and validate the tenant
+in application code, then pass its ID explicitly to `TenantScopedRepository` from
+`apyra-db`:
 
 ```python
-from apyra.security import TenantContext, set_current_tenant, reset_current_tenant
+from apyra.db import TenantScopedRepository
+from apyra.security import (
+    TenantContext,
+    get_current_tenant,
+    require_tenant,
+    reset_current_tenant,
+    set_current_tenant,
+)
 
 token = set_current_tenant(TenantContext(tenant_id="tenant-a"))
 try:
-    # ... request handling; repositories resolve the tenant from context ...
+    tenant = require_tenant(get_current_tenant())
+    repository = TenantScopedRepository(session, TenantRecord, tenant.tenant_id)
+    # Use repository for tenant-scoped reads and writes.
 finally:
     reset_current_tenant(token)
 ```

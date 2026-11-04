@@ -14,6 +14,7 @@ from typing import Any, Generic, TypeVar, cast
 from uuid import UUID
 
 from sqlalchemy import and_, false, func, or_, select
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -22,6 +23,10 @@ from .base import Base
 ModelT = TypeVar("ModelT", bound=Base)
 type CursorValue = str | int | float | bool | None | date | datetime | Decimal | UUID | bytes
 _MAX_CURSOR_LENGTH = 16_384
+
+
+def _identity_sequence_values(identity: Any) -> list[Any]:
+    return [identity[index] for index in range(len(identity))]
 
 
 @dataclass(slots=True)
@@ -89,9 +94,23 @@ class Repository(Generic[ModelT]):  # noqa: UP046
         if self._default_scope is None:
             return await self.session.get(self.model, item_id)
         primary_key = list(self.model.__mapper__.primary_key)
-        if len(primary_key) != 1:
-            return await self.session.get(self.model, item_id)
-        statement = select(self.model).where(primary_key[0] == item_id)
+        identity_values: list[Any]
+        if len(primary_key) == 1 and not isinstance(item_id, (tuple, list, dict)):
+            identity_values = [item_id]
+        elif isinstance(item_id, dict):
+            try:
+                identity_values = [item_id[column.key] for column in primary_key]
+            except KeyError as exc:
+                raise ValueError("identity is missing a primary-key column") from exc
+        elif isinstance(item_id, (tuple, list)):
+            identity_values = _identity_sequence_values(item_id)
+            if len(identity_values) != len(primary_key):
+                raise ValueError("identity does not match the model primary key")
+        else:
+            raise ValueError("identity does not match the model primary key")
+        statement = select(self.model).where(
+            *(column == value for column, value in zip(primary_key, identity_values, strict=True))
+        )
         statement = self._apply_scope(statement, None)
         result = await self.session.execute(statement)
         return result.scalar_one_or_none()
@@ -252,6 +271,44 @@ class TenantScopedRepository(Repository[ModelT]):
             return statement.where(tenant_column == tenant_id)
 
         super().__init__(session, model, default_scope=tenant_scope)
+
+    async def create(self, **values: Any) -> ModelT:
+        requested_tenant = values.setdefault("tenant_id", self.tenant_id)
+        if requested_tenant != self.tenant_id:
+            raise ValueError("cannot create a record for another tenant")
+        return await super().create(**values)
+
+    async def update(self, instance: ModelT, **values: Any) -> ModelT:
+        await self._require_tenant_owner(instance)
+        requested_tenant = values.get("tenant_id", self.tenant_id)
+        if requested_tenant != self.tenant_id:
+            raise ValueError("cannot move a record to another tenant")
+        return await super().update(instance, **values)
+
+    async def delete(self, instance: ModelT) -> None:
+        await self._require_tenant_owner(instance)
+        await super().delete(instance)
+
+    async def _require_tenant_owner(self, instance: ModelT) -> None:
+        if getattr(instance, "tenant_id", None) != self.tenant_id:
+            raise ValueError("cannot modify a record owned by another tenant")
+
+        state = sa_inspect(instance)
+        identity = state.identity
+        if identity is None:
+            raise ValueError("cannot modify an unpersisted tenant record")
+
+        identity_predicates = [
+            primary_key == value
+            for primary_key, value in zip(state.mapper.primary_key, identity, strict=True)
+        ]
+        tenant_column = cast(Any, self.model).tenant_id
+        with self.session.no_autoflush:
+            persisted_tenant = await self.session.scalar(
+                select(tenant_column).where(and_(*identity_predicates)).with_for_update()
+            )
+        if persisted_tenant != self.tenant_id:
+            raise ValueError("cannot modify a record no longer owned by this tenant")
 
 
 def _encode_cursor(values: list[object]) -> str:

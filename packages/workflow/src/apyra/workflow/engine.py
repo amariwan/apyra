@@ -53,6 +53,26 @@ class WorkflowEngine:
         workflow = await self._repository.reconstruct(workflow_id)
         if workflow is None:
             return None
+        if workflow.status == WorkflowStatus.COMPLETED:
+            return workflow
+        if workflow.status not in (
+            WorkflowStatus.PENDING,
+            WorkflowStatus.RUNNING,
+            WorkflowStatus.FAILED,
+        ):
+            raise ValueError(f"workflow in {workflow.status.value} state cannot be resumed")
+        if len(steps) != len(workflow.steps):
+            raise ValueError("resume step sequence does not match persisted workflow steps")
+        if not 0 <= workflow.current_step <= len(workflow.steps):
+            raise ValueError("persisted current_step is outside the workflow step sequence")
+        if workflow.status == WorkflowStatus.FAILED:
+            workflow.transition_to(WorkflowStatus.PENDING)
+            workflow.error = None
+        if workflow.current_step < len(workflow.steps):
+            current_step = workflow.steps[workflow.current_step]
+            if current_step.status in (WorkflowStatus.FAILED, WorkflowStatus.RUNNING):
+                current_step.status = WorkflowStatus.PENDING
+                current_step.error = None
         await self.run(workflow, steps)
         return workflow
 
@@ -69,7 +89,8 @@ class WorkflowEngine:
             attempt = 0
             while attempt < self._max_step_attempts:
                 attempt += 1
-                step.attempts = attempt
+                step.attempts += 1
+                step.error = None
                 try:
                     coroutine = steps[workflow.current_step](workflow)
                     if self._step_timeout_seconds is not None:
@@ -105,6 +126,7 @@ class WorkflowEngine:
                         await self._session.commit()
                         return workflow
                     await self._repository.update_steps(workflow)
+                    await self._session.commit()
                 except Exception as exc:  # noqa: BLE001
                     step.error = str(exc)
                     if attempt >= self._max_step_attempts:
@@ -121,6 +143,7 @@ class WorkflowEngine:
                         await self._session.commit()
                         return workflow
                     await self._repository.update_steps(workflow)
+                    await self._session.commit()
             if step.status != WorkflowStatus.COMPLETED:
                 continue
         if workflow.status != WorkflowStatus.FAILED:

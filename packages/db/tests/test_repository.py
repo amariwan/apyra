@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import cast
 
 import pytest
-from sqlalchemy import Date, DateTime, LargeBinary, Numeric, String, Uuid
+from sqlalchemy import Date, DateTime, LargeBinary, Numeric, String, Uuid, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,6 +36,13 @@ class Item(Base):
 class TenantItem(Base, TenantScopedMixin):
     __tablename__ = "tenant_items"
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class CompositeTenantItem(Base):
+    __tablename__ = "composite_tenant_items"
+    tenant_id: Mapped[str] = mapped_column(String, primary_key=True)
+    item_id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
 
 
@@ -71,6 +78,54 @@ async def test_tenant_scoped_repository_isolates_tenants() -> None:
             assert await repo_a.get("b1") is None
             fetched = await repo_a.get("a1")
             assert fetched is not None and fetched.name == "alpha"
+
+            await base.create(id="tenant-a-row", name="alpha row", tenant_id="tenant-a")
+            await base.create(id="tenant-b-row", name="beta row", tenant_id="tenant-b")
+            assert await repo_a.create(id="scoped", name="scoped row")
+            with pytest.raises(ValueError, match="another tenant"):
+                await repo_a.create(id="injected", name="injected", tenant_id="tenant-b")
+
+            tenant_b = await base.get("b1")
+            assert tenant_b is not None
+            with pytest.raises(ValueError, match="another tenant"):
+                await repo_a.update(tenant_b, name="hijacked")
+            with pytest.raises(ValueError, match="another tenant"):
+                await repo_a.delete(tenant_b)
+
+            stale_update = await base.create(id="stale-update", name="before", tenant_id="tenant-a")
+            stale_delete = await base.create(id="stale-delete", name="before", tenant_id="tenant-a")
+            await session.execute(
+                update(TenantItem)
+                .where(TenantItem.id.in_((stale_update.id, stale_delete.id)))
+                .values(tenant_id="tenant-b")
+                .execution_options(synchronize_session=False)
+            )
+            with pytest.raises(ValueError, match="no longer owned"):
+                await repo_a.update(stale_update, name="must-not-update")
+            with pytest.raises(ValueError, match="no longer owned"):
+                await repo_a.delete(stale_delete)
+
+            persisted_rows = (
+                await session.execute(
+                    select(TenantItem.id, TenantItem.tenant_id).where(
+                        TenantItem.id.in_((stale_update.id, stale_delete.id))
+                    )
+                )
+            ).all()
+            assert set(persisted_rows) == {
+                ("stale-update", "tenant-b"),
+                ("stale-delete", "tenant-b"),
+            }
+
+        async with manager.session() as session:
+            base = Repository(session, CompositeTenantItem)
+            await base.create(tenant_id="tenant-a", item_id="shared", name="alpha")
+            await base.create(tenant_id="tenant-b", item_id="shared", name="beta")
+            repo_a = TenantScopedRepository(session, CompositeTenantItem, "tenant-a")
+            assert await repo_a.get(("tenant-b", "shared")) is None
+            tenant_a_row = await repo_a.get(("tenant-a", "shared"))
+            assert tenant_a_row is not None and tenant_a_row.name == "alpha"
+            assert await repo_a.get({"tenant_id": "tenant-b", "item_id": "shared"}) is None
     finally:
         await manager.close()
 

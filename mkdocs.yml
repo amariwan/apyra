@@ -105,7 +105,9 @@ nav:
       - Deployment: guides/deployment.md
       - Testing: guides/testing.md
       - Troubleshooting: guides/troubleshooting.md
-  - Migration guides: migrations/index.md
+  - Migration guides:
+      - Overview: migrations/index.md
+      - 0.1.0 release hardening: migrations/0.1.0-release-hardening.md
   - Package reference:
       - Overview: reference/index.md
       - Metapackage: reference/meta.md
@@ -131,6 +133,7 @@ nav:
   - Project:
       - Changelog: project/changelog.md
       - Contributing: project/contributing.md
+      - Engineering standards: project/engineering-standards.md
       - Compatibility: project/compatibility.md
   - Release:
       - Readiness: release/readiness-assessment.md

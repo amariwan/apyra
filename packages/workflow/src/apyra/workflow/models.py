@@ -37,4 +37,4 @@ class WorkflowRecord(Base, TimestampMixin):
     fencing_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     version_id: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
-    __mapper_args__ = {"version_id_col": version_id}  # noqa: RUF012
+    __mapper_args__: dict[str, Any] = {"version_id_col": version_id}  # noqa: RUF012

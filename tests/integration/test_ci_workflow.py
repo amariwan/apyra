@@ -74,11 +74,21 @@ def test_quality_test_job_provisions_postgres_and_redis_services() -> None:
     assert "redis" in services
     assert services["postgres"]["image"].startswith("postgres:")
     assert services["redis"]["image"].startswith("redis:")
+    assert "apyra.release-test-service=postgres" in services["postgres"]["options"]
+    assert "apyra.release-test-service=redis" in services["redis"]["options"]
 
     env = test_job["env"]
     assert env["APYRA_TEST_POSTGRES_URL"].endswith("apyra_test")
     assert env["APYRA_TEST_POSTGRES_URL_SYNC"].endswith("apyra_test")
     assert env["APYRA_TEST_REDIS_URL"].endswith("/15")
+
+    reliability = next(
+        step for step in test_job["steps"] if step.get("name") == "Reliability harness"
+    )
+    assert reliability["if"] == "inputs.python-version == '3.12'"
+    assert "scripts/multi_process_reliability.py" in reliability["run"]
+    assert '--redis-container "${redis_container}"' in reliability["run"]
+    assert "scripts/fault_injection.py" in reliability["run"]
 
 
 def test_security_scans_run_once_and_bandit_errors_are_not_ignored() -> None:

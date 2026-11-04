@@ -143,7 +143,58 @@ async def test_recover_pending_processes_abandoned_messages() -> None:
     processed = await consumer_b.recover_pending()
     assert processed == 1
     assert envelope.message_id in handler_b.received
-    assert handler_b.attempts == [2]  # second delivery attempt
+    assert handler_b.attempts == [1]  # the first handler attempt after the abandoned read
+    await client.flushdb()
+    await client.aclose()
+
+
+async def test_recover_pending_scans_past_recent_entries() -> None:
+    client = await _make_client()
+    await client.flushdb()
+    stream, group = "paged-rec-stream", "paged-rec-group"
+    publisher = RedisStreamsPublisher(client, stream)
+    older = MessageEnvelope(payload={"n": 1})
+    newer = MessageEnvelope(payload={"n": 2})
+    await publisher.publish(older)
+    await publisher.publish(newer)
+
+    consumer = RedisStreamsConsumer(
+        client,
+        stream,
+        group,
+        "worker-a",
+        _Handler(),
+        min_idle_ms=30,
+        recover_batch_size=1,
+    )
+    await consumer.ensure_group()
+    deliveries = await client.xreadgroup(
+        groupname=group, consumername="worker-a", streams={stream: ">"}, count=2
+    )
+    assert deliveries
+    first_entry_id = deliveries[0][1][0][0]
+    await asyncio.sleep(0.04)
+    # Refresh the first (lowest-ID) entry so it is too recent, while the later
+    # entry remains eligible and would be starved by a first-page-only scan.
+    await client.xclaim(stream, group, "worker-a", min_idle_time=0, message_ids=[first_entry_id])
+
+    handler = _Handler()
+    recovering = RedisStreamsConsumer(
+        client,
+        stream,
+        group,
+        "worker-b",
+        handler,
+        min_idle_ms=30,
+        recover_batch_size=1,
+    )
+    assert await recovering.recover_pending() == 0
+    processed = await recovering.recover_pending()
+
+    assert processed == 1
+    assert handler.received == [newer.message_id]
+    pending = await client.xpending_range(stream, group, min="-", max="+", count=10)
+    assert [entry["message_id"] for entry in pending] == [first_entry_id]
     await client.flushdb()
     await client.aclose()
 
@@ -162,7 +213,7 @@ async def test_failed_message_is_dead_lettered_after_exhaustion() -> None:
         group,
         "worker",
         _Handler(fail=True),
-        retry_policy=ExponentialBackoff(max_attempts=1, jitter=False),
+        retry_policy=ExponentialBackoff(max_attempts=1, base_delay_seconds=0.001, jitter=False),
         dead_letter_stream=dlq,
         min_idle_ms=0,
     )
@@ -176,15 +227,118 @@ async def test_failed_message_is_dead_lettered_after_exhaustion() -> None:
         for message_id, fields in messages:
             await consumer._process(message_id, fields, attempt=1)
 
-    # Recovery sees delivery count >= max_attempts and moves it to the DLQ.
+    # Wait for the configured retry delay before checking exhausted attempts.
+    await asyncio.sleep(0.01)
     await consumer.recover_pending()
 
     dead = await client.xrange(dlq, min="-", max="+")
     assert len(dead) == 1
     assert dead[0][1]["message_id"] == str(envelope.message_id)
-    # Source stream entry removed after dead-lettering.
+    # The source entry remains available to other consumer groups.
     remaining = await client.xrange(stream, min="-", max="+")
-    assert remaining == []
+    assert len(remaining) == 1
+    await client.flushdb()
+    await client.aclose()
+
+
+async def test_exhausted_message_without_dead_letter_sink_remains_pending() -> None:
+    client = await _make_client()
+    await client.flushdb()
+    stream, group = "no-dlq-stream", "no-dlq-group"
+    envelope = MessageEnvelope(payload={"n": 1})
+    await RedisStreamsPublisher(client, stream).publish(envelope)
+
+    consumer = RedisStreamsConsumer(
+        client,
+        stream,
+        group,
+        "worker",
+        _Handler(fail=True),
+        retry_policy=ExponentialBackoff(max_attempts=1, base_delay_seconds=0.001, jitter=False),
+        min_idle_ms=0,
+    )
+    await consumer.ensure_group()
+    response = await client.xreadgroup(
+        groupname=group, consumername="worker", streams={stream: ">"}, count=1, block=100
+    )
+    assert response
+    entry_id, fields = response[0][1][0]
+    assert await consumer._process(entry_id, fields, attempt=1) == "failed"
+
+    await asyncio.sleep(0.01)
+    await consumer.recover_pending()
+
+    assert (await client.xpending(stream, group))["pending"] == 1
+    assert len(await client.xrange(stream, min="-", max="+")) == 1
+    await client.flushdb()
+    await client.aclose()
+
+
+async def test_invalid_message_is_preserved_in_dead_letter_stream(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = await _make_client()
+    await client.flushdb()
+    stream, group, dlq = "invalid-stream", "invalid-group", "invalid-stream-dead"
+    entry_id = await client.xadd(
+        stream,
+        {
+            "message_id": "invalid-id",
+            "payload": "password=do-not-log",
+            "occurred_at": "not-a-datetime",
+        },
+    )
+    consumer = RedisStreamsConsumer(
+        client, stream, group, "worker", _Handler(), dead_letter_stream=dlq
+    )
+    await consumer.ensure_group()
+    response = await client.xreadgroup(
+        groupname=group, consumername="worker", streams={stream: ">"}, count=1, block=100
+    )
+    assert response
+
+    with caplog.at_level("ERROR", logger="apyra.messaging.redis_streams"):
+        result = await consumer._process(entry_id, response[0][1][0][1], attempt=1)
+
+    dead = await client.xrange(dlq, min="-", max="+")
+    assert result == "invalid"
+    assert len(dead) == 1
+    assert dead[0][1]["payload"] == "password=do-not-log"
+    assert dead[0][1]["apyra_error"] == "invalid_message_payload"
+    assert dead[0][1]["apyra_decode_error"] == "ValueError"
+    assert "do-not-log" not in caplog.text
+    assert (await client.xpending(stream, group))["pending"] == 0
+    await client.flushdb()
+    await client.aclose()
+
+
+async def test_handler_exception_log_excludes_exception_text(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = await _make_client()
+    await client.flushdb()
+    stream, group = "safe-log-stream", "safe-log-group"
+    envelope = MessageEnvelope(payload={"n": 1})
+    await RedisStreamsPublisher(client, stream).publish(envelope)
+    ((entry_id, _fields),) = await client.xrange(stream, min="-", max="+")
+
+    class SensitiveErrorHandler:
+        async def handle(self, envelope: MessageEnvelope, context: DeliveryContext) -> None:
+            raise RuntimeError("password=do-not-log")
+
+    consumer = RedisStreamsConsumer(client, stream, group, "worker", SensitiveErrorHandler())
+    await consumer.ensure_group()
+    response = await client.xreadgroup(
+        groupname=group, consumername="worker", streams={stream: ">"}, count=1, block=100
+    )
+    assert response
+
+    with caplog.at_level("WARNING", logger="apyra.messaging.redis_streams"):
+        result = await consumer._process(entry_id, response[0][1][0][1], attempt=1)
+
+    assert result == "failed"
+    assert "do-not-log" not in caplog.text
+    assert any(getattr(record, "error_type", None) == "RuntimeError" for record in caplog.records)
     await client.flushdb()
     await client.aclose()
 
@@ -217,5 +371,80 @@ async def test_idempotency_suppresses_duplicate_delivery() -> None:
 
     assert len(handler.received) == 1
     assert handler.received[0] == message_id
+    await client.flushdb()
+    await client.aclose()
+
+
+async def test_failed_handler_releases_idempotency_claim_for_retry() -> None:
+    client = await _make_client()
+    await client.flushdb()
+    stream, group = "retry-idem-stream", "retry-idem-group"
+    store = RedisIdempotencyStore(client)
+
+    class RetryOnceHandler:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def handle(self, envelope: MessageEnvelope, context: DeliveryContext) -> None:
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("transient failure")
+
+    handler = RetryOnceHandler()
+    envelope = MessageEnvelope(payload={"n": 1})
+    await RedisStreamsPublisher(client, stream).publish(envelope)
+    consumer = RedisStreamsConsumer(
+        client, stream, group, "worker", handler, idempotency_store=store
+    )
+    await consumer.ensure_group()
+    response = await client.xreadgroup(
+        groupname=group, consumername="worker", streams={stream: ">"}, count=1, block=100
+    )
+    entry_id, fields = response[0][1][0]
+
+    assert await consumer._process(entry_id, fields, attempt=1) == "failed"
+    assert await consumer._process(entry_id, fields, attempt=2) == "acked"
+    assert handler.calls == 2
+    await client.flushdb()
+    await client.aclose()
+
+
+async def test_recovered_entry_stays_pending_until_idempotency_claim_is_free() -> None:
+    client = await _make_client()
+    await client.flushdb()
+    stream, group = "deferred-idem-stream", "deferred-idem-group"
+    store = RedisIdempotencyStore(client)
+    envelope = MessageEnvelope(payload={"n": 1})
+    await RedisStreamsPublisher(client, stream).publish(envelope)
+    handler = _Handler()
+    consumer = RedisStreamsConsumer(
+        client, stream, group, "worker", handler, idempotency_store=store, min_idle_ms=0
+    )
+    await consumer.ensure_group()
+    response = await client.xreadgroup(
+        groupname=group, consumername="worker", streams={stream: ">"}, count=1, block=100
+    )
+    entry_id, fields = response[0][1][0]
+    claimed = asyncio.Event()
+    release = asyncio.Event()
+
+    async def hold_claim() -> None:
+        assert (await store.claim(envelope.message_id)).value == "claimed"
+        claimed.set()
+        await release.wait()
+        await store.release(envelope.message_id)
+
+    owner_task = asyncio.create_task(hold_claim())
+    await claimed.wait()
+    try:
+        assert await consumer._process(entry_id, fields, attempt=1) == "in_progress"
+        pending = await client.xpending(stream, group)
+        assert pending["pending"] == 1
+    finally:
+        release.set()
+        await owner_task
+    assert await consumer.recover_pending() == 1
+    assert handler.received == [envelope.message_id]
+    assert (await client.xpending(stream, group))["pending"] == 0
     await client.flushdb()
     await client.aclose()

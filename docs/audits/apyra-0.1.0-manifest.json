@@ -64,11 +64,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-auth/",
       "wheel": {
         "filename": "apyra_auth-0.1.0-py3-none-any.whl",
-        "sha256": "18ad1e585b616e8e253a70453b06cf96d9dc89942f664b1244f690c16cbe3d98"
+        "sha256": "90f207199475ba3c89dd0dabf79aab3e20ccd4ebd8673b87f199ef0ce99ddbe8"
       },
       "sdist": {
         "filename": "apyra_auth-0.1.0.tar.gz",
-        "sha256": "f7d729c2f34b0f2c83fb8012365cd2130c0c6e584eaf885a952baa905f466af8"
+        "sha256": "d875232576acd6bc5617b86678f59adc0ed6d562144d4309458d47d8f505aa6a"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0",
@@ -164,11 +164,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-db/",
       "wheel": {
         "filename": "apyra_db-0.1.0-py3-none-any.whl",
-        "sha256": "c34f9b768a621fbb3fba32b2dd92067499a56ae6d7107c6e0cad734ea5faa4c1"
+        "sha256": "a34f3550969c94e1b22b21340b87337077bfbcd806df52291c7b89b620b5df99"
       },
       "sdist": {
         "filename": "apyra_db-0.1.0.tar.gz",
-        "sha256": "2e192dab068a90a3beb05b08126ac50941e1f0a305b7be09881ed1a0113380d3"
+        "sha256": "d39bb6c7dc1d7ed13038c5d8758bd4dd2e20e914f8ffc59e7587b5aed491dda6"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0",
@@ -291,11 +291,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-messaging/",
       "wheel": {
         "filename": "apyra_messaging-0.1.0-py3-none-any.whl",
-        "sha256": "be8c6e97ca822badc3dd350b3af3e1a2fce4d08b297f5ddfb3f113c8d3c1e457"
+        "sha256": "a1ef03d3be7702541832b474c5c6ebd23471e4ab04a959f17477961a5d69b66c"
       },
       "sdist": {
         "filename": "apyra_messaging-0.1.0.tar.gz",
-        "sha256": "0bccc61d53cd915ef63aaa136547b14c5b57cabed8df637bedb3329963b7fc9b"
+        "sha256": "a10bef80dee23707d15fa6b544d7accdc0c4e98e301cc9b13008b6b0bbf24be3"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0",
@@ -318,11 +318,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-observability/",
       "wheel": {
         "filename": "apyra_observability-0.1.0-py3-none-any.whl",
-        "sha256": "3486add2a986e0002dd2a7675f4a8d4c79efe25bceca1ea51b032ef5d1c7b5c9"
+        "sha256": "2d02714a32b498582f6f5936c3ddecca4f1bfca711f0e304a55173a74824f7f9"
       },
       "sdist": {
         "filename": "apyra_observability-0.1.0.tar.gz",
-        "sha256": "b805e07f33d03c6312253e3c2c74a0ed1fe4db42be5cb209e7f966501182a104"
+        "sha256": "f315a05126c2dd6a51774ed100e2217a93f8fda10d097ac6ed77d6b1730c625c"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0"
@@ -343,11 +343,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-security/",
       "wheel": {
         "filename": "apyra_security-0.1.0-py3-none-any.whl",
-        "sha256": "6f0c8469e465f3d822ab35f93110bf6b05f02ec194dd0d7572b24e8501dbf6a6"
+        "sha256": "eba25869b224e4433e3b4d4f77a84cfd6948301fdc7d12dcdd928e8c093c8d23"
       },
       "sdist": {
         "filename": "apyra_security-0.1.0.tar.gz",
-        "sha256": "1ca9a7637f5fe7ed799ab7d01f81a0e1640389d96c9bb4331b6a6968513e0c5f"
+        "sha256": "11f16bfdd6ede250b34647af2e988c8971aecacdce0e3722a507d8e1f4e2ebd1"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0"
@@ -384,11 +384,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-tasks/",
       "wheel": {
         "filename": "apyra_tasks-0.1.0-py3-none-any.whl",
-        "sha256": "97603e3aa3d9d77bac92b38b458bd5a4c6151193b4434bf1a1192baeb3b89d3d"
+        "sha256": "fcfb06ab4674643039fe1cb9b63714f01eadeaf18ed812694cbb1e4bd38063ed"
       },
       "sdist": {
         "filename": "apyra_tasks-0.1.0.tar.gz",
-        "sha256": "dc2363489e81d0dd094da2952a6fc93e0751b3bfc263fadfa570a4ce4a5a4dde"
+        "sha256": "a22fc88942e35aa402e431dd7829f282b8fc7b1bdb259865d69f3838e0b0a379"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0"
@@ -411,11 +411,11 @@
       "pypi_destination": "https://pypi.org/project/apyra-workflow/",
       "wheel": {
         "filename": "apyra_workflow-0.1.0-py3-none-any.whl",
-        "sha256": "50f8f6466a7ef61bef11d93c3fc29f3076572fd2c40570287fd3314d20439079"
+        "sha256": "613fa793581fde169a44d8c133a9a5be9f926691afa04b25c7e005b665f620a8"
       },
       "sdist": {
         "filename": "apyra_workflow-0.1.0.tar.gz",
-        "sha256": "e218cfb052a8fbf665b82e0f707749b730422308bb71abc198838e70c9d3a384"
+        "sha256": "a15cbcf6fb299356998c885814a55761fac2acda68646f8aaa82e0586d0e4258"
       },
       "dependencies": [
         "apyra-core>=0.1.0,<0.2.0",

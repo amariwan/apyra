@@ -5,7 +5,8 @@
 - Add `RedisRevocationStore` (`apyra-auth`) for distributed, multi-instance token revocation with
   refresh-token reuse detection, plus a `redis` extra.
 - Add multi-tenancy foundation: `TenantScopedMixin` and `TenantScopedRepository` (`apyra-db`) that
-  fail-closed on cross-tenant reads, and a request-scoped tenant context (`apyra-security`).
+  fail-closed on cross-tenant reads and stale-owner writes, and a request-scoped tenant context
+  (`apyra-security`).
 - Add per-step timeouts to the workflow engine (`step_timeout_seconds`) with retry-then-fail and
   resumable cancellation semantics.
 - Convert the default `SecurityHeadersMiddleware` (`apyra-fastapi`) from `BaseHTTPMiddleware` to a
@@ -18,6 +19,10 @@
 - Rewrite the Redis Streams consumer (`apyra-messaging`) to recover abandoned pending messages
   (via `XPENDING`/`XCLAIM`) and process them through the same path as new messages, with
   exponential backoff, configurable retry limits, and dead-lettering. Delivery is at-least-once.
+- Keep malformed and retry-exhausted Redis Stream entries pending when no dead-letter sink exists;
+  preserve malformed entries in configured dead-letter sinks.
+- Route malformed Redis Stream entries through the configured dead-letter sink, and redact exception
+  text from messaging diagnostics so payloads and credentials are not copied into logs.
 - Harden the transactional outbox with worker ownership (`leased_by`), fencing tokens, and
   optimistic concurrency (`version_id`) so a stale worker cannot overwrite state owned by another
   worker, plus poll/lease indexes and state-transition validation.
@@ -26,6 +31,9 @@
 - Persist per-step workflow state, add `WorkflowRepository.reconstruct`/`WorkflowEngine.resume`,
   and add worker ownership and optimistic concurrency to `apyra-workflow`; multi-worker workflow
   durability remains experimental.
+- Add the additive 0.1.0 schema upgrade for existing outbox/workflow tables; see
+  `docs/migrations/0.1.0-release-hardening.md`; PostgreSQL idempotency users apply the companion
+  table-creation script there as well.
 - Rename `DatabaseSessionManager`'s constructor parameter `host` to `url` (it accepts a full
   database URL) and document it.
 
@@ -41,6 +49,8 @@
   `DeprecationWarning`; implement both `publish()` and `subscribe()` before the next major
   `apyra-events` release.
 - Repair release workflow dependency graph, version propagation, tag glob, manual dispatch guard, recovery-friendly publishing, and add automated workflow validation tests.
+- Add labeled disposable-service checks for multi-process reliability and guarded Redis/PostgreSQL
+  restart fault injection to the Python 3.12 CI job.
 - `apyra new <name> --template cookie-auth` generates an opt-in cookie-auth integration starter
   with CSRF protection on unsafe routes; the default minimal starter is unchanged.
 

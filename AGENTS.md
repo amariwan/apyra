@@ -117,6 +117,9 @@ Before modifying code:
 3. Discover available skills.
 4. Read and follow relevant skill instructions.
 5. Identify applicable coding, testing, security, and architectural conventions.
+6. Read the mandatory [Apyra Engineering Standards](docs/project/engineering-standards.md) before
+   implementing or reviewing code. It defines the detailed function, API, architecture, security,
+   reliability, and testing rules for this repository.
 
 Use available skills for:
 
