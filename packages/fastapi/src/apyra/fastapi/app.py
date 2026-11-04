@@ -43,17 +43,40 @@ def _validate_rate_limit(max_requests: int, window_seconds: int) -> None:
         raise ValueError("rate_limit_window_seconds must be positive")
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add baseline browser security headers without replacing app policy."""
+class SecurityHeadersMiddleware:
+    """Add baseline browser security headers without replacing app policy.
 
-    async def dispatch(self, request: Any, call_next: Any) -> Any:
-        """Add security headers to the response when the app did not set them."""
-        response = await call_next(request)
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault("Referrer-Policy", "no-referrer")
-        response.headers.setdefault("Permissions-Policy", "geolocation=()")
-        return response
+    Implemented as a lightweight pure-ASGI middleware (rather than
+    ``BaseHTTPMiddleware``) so the default request path avoids the streaming
+    overhead of the base middleware class while preserving identical behavior.
+    """
+
+    _SECURITY_HEADERS: tuple[tuple[bytes, bytes], ...] = (
+        (b"x-content-type-options", b"nosniff"),
+        (b"x-frame-options", b"DENY"),
+        (b"referrer-policy", b"no-referrer"),
+        (b"permissions-policy", b"geolocation=()"),
+    )
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                existing = {name.lower() for name, _ in headers}
+                for name, value in self._SECURITY_HEADERS:
+                    if name not in existing:
+                        headers.append((name, value))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

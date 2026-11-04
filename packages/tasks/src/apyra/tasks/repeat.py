@@ -13,6 +13,8 @@ from typing import Any, Literal, cast, overload
 NoArgsFunc = Callable[[], Awaitable[None] | None]
 ExceptionHandler = Callable[[Exception], Awaitable[None] | None]
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 async def _run_callback(callback: Callable[..., Awaitable[None] | None], *args: object) -> None:
     if inspect.iscoroutinefunction(callback):
@@ -90,7 +92,7 @@ def repeat_every(
                         if on_exception is not None:
                             await _run_callback(on_exception, exc)
                         else:
-                            logging.getLogger(__name__).exception("Repeated task failed")
+                            logger.exception("Repeated task failed")
                     repetitions += 1
                     if max_repetitions is None or repetitions < max_repetitions:
                         await asyncio.sleep(seconds)

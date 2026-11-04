@@ -4,16 +4,40 @@ import hashlib
 import pytest
 
 from apyra.security import (
+    TenantContext,
     constant_time_compare,
     generate_api_key,
     generate_csrf_token,
+    get_current_tenant,
     hash_password,
     password_hash_needs_rehash,
     redact_mapping,
+    require_tenant,
+    reset_current_tenant,
+    set_current_tenant,
     verify_api_key,
     verify_csrf_token,
     verify_password,
 )
+
+
+def test_tenant_context_requires_explicit_context() -> None:
+    assert get_current_tenant() is None
+    with pytest.raises(ValueError, match="tenant context is required"):
+        require_tenant(None)
+
+    context = TenantContext(tenant_id="tenant-a")
+    assert require_tenant(context) is context
+
+
+def test_tenant_context_is_request_scoped() -> None:
+    token = set_current_tenant(TenantContext(tenant_id="tenant-a"))
+    try:
+        assert get_current_tenant() is not None
+        assert get_current_tenant().tenant_id == "tenant-a"  # type: ignore[union-attr]
+    finally:
+        reset_current_tenant(token)
+    assert get_current_tenant() is None
 
 
 def test_password_round_trip() -> None:

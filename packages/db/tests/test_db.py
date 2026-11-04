@@ -24,6 +24,26 @@ class SchemaProbe(Base):
 
 
 @pytest.mark.asyncio
+async def test_session_manager_accepts_url_keyword() -> None:
+    settings = DbSettings(db_enabled=True, db_backend="sqlite", db_database=":memory:")
+    manager = DatabaseManager(url=build_async_database_url(settings), engine_kwargs={"echo": False})
+    try:
+        async with manager.session() as session:
+            result = await session.execute(text("select 1"))
+            assert result.scalar_one() == 1
+    finally:
+        await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_session_manager_keeps_deprecated_host_keyword_compatibility() -> None:
+    settings = DbSettings(db_enabled=True, db_backend="sqlite", db_database=":memory:")
+    with pytest.warns(DeprecationWarning, match="host.*deprecated"):
+        manager = DatabaseManager(host=build_async_database_url(settings))
+    await manager.close()
+
+
+@pytest.mark.asyncio
 async def test_sqlite_session_executes_query() -> None:
     settings = DbSettings(db_enabled=True, db_backend="sqlite", db_database=":memory:")
     url = build_async_database_url(settings)

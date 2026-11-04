@@ -26,9 +26,11 @@ in any package. Each concrete subpackage, such as `apyra.core` and
 
 ## Scope
 
-Apyra delivers independently publishable packages:
+Apyra delivers 20 independently publishable distributions:
 
 - `apyra-core`
+- `apyra-domain`
+- `apyra-application`
 - `apyra-fastapi`
 - `apyra-db`
 - `apyra-auth`
@@ -40,7 +42,9 @@ Apyra delivers independently publishable packages:
 - `apyra-channels`
 - `apyra-i18n`
 - `apyra-events`
-- `apyra-security`
+- `apyra-messaging`
 - `apyra-tasks`
+- `apyra-workflow`
+- `apyra-security`
 - `apyra-cli`
 - `apyra` (metapackage)

@@ -4,9 +4,12 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any, cast
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 try:
     from opentelemetry import trace
@@ -64,11 +67,48 @@ def instrument_fastapi(app: Any) -> bool:
     return True
 
 
+def _sqlalchemy_is_instrumentable() -> bool:
+    """Return whether the installed SQLAlchemy is supported by the OTel instrumentor."""
+    try:
+        import importlib.metadata as importlib_metadata
+
+        version = importlib_metadata.version("sqlalchemy")
+    except Exception:  # noqa: BLE001 - best effort
+        return False
+    try:
+        major, minor = (int(part) for part in version.split(".")[:2])
+    except ValueError:
+        return False
+    return (major, minor) < (2, 1)
+
+
 def instrument_sqlalchemy(engine: Any) -> bool:
-    """Instrument a SQLAlchemy engine if the optional instrumentation package is installed."""
+    """Instrument a SQLAlchemy engine if the optional instrumentation package is installed.
+
+    The upstream OpenTelemetry SQLAlchemy instrumentor only supports SQLAlchemy
+    ``< 2.1.0``. When a newer SQLAlchemy is installed it silently does nothing, so
+    this helper reports that outcome honestly (``False`` plus a warning) instead of
+    claiming success.
+    """
     try:
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
     except ImportError:
         return False
+    if not _sqlalchemy_is_instrumentable():
+        logger.warning(
+            "SQLAlchemy %s is not instrumentable by opentelemetry-instrumentation-sqlalchemy "
+            "(supports < 2.1.0); skipping SQLAlchemy instrumentation",
+            _sqlalchemy_version_text(),
+        )
+        return False
     SQLAlchemyInstrumentor().instrument(engine=engine)
     return True
+
+
+def _sqlalchemy_version_text() -> str:
+    try:
+        import importlib.metadata as importlib_metadata
+
+        return importlib_metadata.version("sqlalchemy")
+    except Exception:  # noqa: BLE001
+        return "unknown"

@@ -6,6 +6,12 @@ from pydantic import SecretStr
 
 from apyra.auth import AuthenticationError, AuthSettings
 from apyra.auth import TokenService as TokenIssuer
+from apyra.auth.redis_revocation import _ttl
+
+
+def test_redis_revocation_ttl_rounds_up_to_preserve_token_deadline(monkeypatch) -> None:
+    monkeypatch.setattr("apyra.auth.redis_revocation.time.time", lambda: 100.1)
+    assert _ttl(101.2) == 2
 
 
 def test_token_pair_and_rotation() -> None:

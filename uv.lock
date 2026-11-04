@@ -481,6 +481,9 @@ dependencies = [
 oidc = [
     { name = "httpx" },
 ]
+redis = [
+    { name = "redis" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -489,8 +492,9 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.8.0" },
     { name = "pydantic-settings", specifier = ">=2.4.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.15.1" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0.0" },
 ]
-provides-extras = ["oidc"]
+provides-extras = ["oidc", "redis"]
 
 [[package]]
 name = "apyra-cache"

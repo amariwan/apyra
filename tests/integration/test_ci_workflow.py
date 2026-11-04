@@ -74,11 +74,21 @@ def test_quality_test_job_provisions_postgres_and_redis_services() -> None:
     assert "redis" in services
     assert services["postgres"]["image"].startswith("postgres:")
     assert services["redis"]["image"].startswith("redis:")
+    assert "apyra.release-test-service=postgres" in services["postgres"]["options"]
+    assert "apyra.release-test-service=redis" in services["redis"]["options"]
 
     env = test_job["env"]
     assert env["APYRA_TEST_POSTGRES_URL"].endswith("apyra_test")
     assert env["APYRA_TEST_POSTGRES_URL_SYNC"].endswith("apyra_test")
     assert env["APYRA_TEST_REDIS_URL"].endswith("/15")
+
+    reliability = next(
+        step for step in test_job["steps"] if step.get("name") == "Reliability harness"
+    )
+    assert reliability["if"] == "inputs.python-version == '3.12'"
+    assert "scripts/multi_process_reliability.py" in reliability["run"]
+    assert '--redis-container "${redis_container}"' in reliability["run"]
+    assert "scripts/fault_injection.py" in reliability["run"]
 
 
 def test_security_scans_run_once_and_bandit_errors_are_not_ignored() -> None:
@@ -96,6 +106,34 @@ def test_quality_matrix_keeps_both_supported_python_versions() -> None:
         "3.12",
         "3.13",
     ]
+
+
+def test_publish_workflow_binds_downloaded_artifacts_to_a_manifest() -> None:
+    workflow = _load_yaml(PUBLISH_WORKFLOW)
+    jobs = workflow["jobs"]
+    build = jobs["build"]
+    build_steps = build["steps"]
+    manifest_step = next(
+        step for step in build_steps if step.get("name") == "Generate and verify artifact manifest"
+    )
+    assert "scripts/generate_manifest.py" in manifest_step["run"]
+    assert "docs/audits/apyra-0.1.0-manifest.json" in manifest_step["run"]
+
+    publication_jobs = (
+        "validate",
+        "publish-core",
+        "publish-leaf",
+        "publish-fastapi",
+        "publish-meta",
+        "github-release",
+    )
+    for job_name in publication_jobs:
+        steps = jobs[job_name]["steps"]
+        verify_step = next(
+            step for step in steps if step.get("name") == "Verify downloaded artifact manifest"
+        )
+        assert "scripts/verify_artifact_manifest.py" in verify_step["run"]
+        assert "dist/apyra-${RELEASE_VERSION}-manifest.json" in verify_step["run"]
 
 
 def test_documentation_only_changes_run_the_strict_docs_gate() -> None:

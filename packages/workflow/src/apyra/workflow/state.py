@@ -33,6 +33,7 @@ class WorkflowStep:
     error: str | None = None
     attempts: int = 0
     compensation_error: str | None = None
+    handler_id: str | None = None
 
 
 _LEGAL_TRANSITIONS: dict[WorkflowStatus, set[WorkflowStatus]] = {

@@ -1,0 +1,576 @@
+{
+  "release": "0.1.0",
+  "distributions": [
+    {
+      "name": "apyra-core",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-core/",
+      "wheel": {
+        "filename": "apyra_core-0.1.0-py3-none-any.whl",
+        "sha256": "7adf29212f1a5e53a277ab2560b3b0487a96cc2f60babea1c98a9e8435d41fc6"
+      },
+      "sdist": {
+        "filename": "apyra_core-0.1.0.tar.gz",
+        "sha256": "573b1dda7b2d6718c68cc1a9541795f6bfcab91a9a2c6109ddf013a3c1d47f34"
+      },
+      "dependencies": [
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra-ai",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-ai/",
+      "wheel": {
+        "filename": "apyra_ai-0.1.0-py3-none-any.whl",
+        "sha256": "a3aad7a6834f7f260c3054caefd60bd368649e530a018989c3419d645ebe1bd7"
+      },
+      "sdist": {
+        "filename": "apyra_ai-0.1.0.tar.gz",
+        "sha256": "ef53350c58c88eed9968ebfa3b8c2d815a26b5adac7cf4785e5e64d0f2e53e89"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "httpx>=0.27.0",
+        "pydantic>=2.8.0"
+      ],
+      "optional_extras": {
+        "openai": []
+      }
+    },
+    {
+      "name": "apyra-application",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-application/",
+      "wheel": {
+        "filename": "apyra_application-0.1.0-py3-none-any.whl",
+        "sha256": "0bcc53b40dfa6c79a3adc83274d4915be44b1cc4210199e96e0d8b7d7bfa30b0"
+      },
+      "sdist": {
+        "filename": "apyra_application-0.1.0.tar.gz",
+        "sha256": "352e16c823db3cdda7cf080c1067e356a0ae054b36f5eaad7c68c0ddcc615c4b"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "apyra-domain>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra-auth",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-auth/",
+      "wheel": {
+        "filename": "apyra_auth-0.1.0-py3-none-any.whl",
+        "sha256": "90f207199475ba3c89dd0dabf79aab3e20ccd4ebd8673b87f199ef0ce99ddbe8"
+      },
+      "sdist": {
+        "filename": "apyra_auth-0.1.0.tar.gz",
+        "sha256": "d875232576acd6bc5617b86678f59adc0ed6d562144d4309458d47d8f505aa6a"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "pyjwt[crypto]>=2.15.1",
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0"
+      ],
+      "optional_extras": {
+        "oidc": [
+          "httpx>=0.27.0"
+        ],
+        "redis": [
+          "redis>=5.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-cache",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-cache/",
+      "wheel": {
+        "filename": "apyra_cache-0.1.0-py3-none-any.whl",
+        "sha256": "781bf450936b5a85327484dc97993bcf04fd41658f8ad505ff9d18913ea8d434"
+      },
+      "sdist": {
+        "filename": "apyra_cache-0.1.0.tar.gz",
+        "sha256": "daa268c52efb98f326a837a44b64b05b76849a319c1cac8b6a329023230cbda2"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0"
+      ],
+      "optional_extras": {
+        "redis": [
+          "redis>=5.0.0"
+        ],
+        "memcached": [
+          "pymemcache>=4.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-channels",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-channels/",
+      "wheel": {
+        "filename": "apyra_channels-0.1.0-py3-none-any.whl",
+        "sha256": "44a5e4abf3c5b88d9c4974957ce01d03fbd57e2975e98f734808310428e761ab"
+      },
+      "sdist": {
+        "filename": "apyra_channels-0.1.0.tar.gz",
+        "sha256": "9a1b8d9b2157d2da1ee5fee6dd4faf8853a55d19a85b5fa599e63e29b6b83182"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0"
+      ],
+      "optional_extras": {
+        "websocket": [
+          "fastapi>=0.115.0"
+        ],
+        "redis": [
+          "redis>=5.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-cli",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-cli/",
+      "wheel": {
+        "filename": "apyra_cli-0.1.0-py3-none-any.whl",
+        "sha256": "6441b946341d5bbb1da88afbf08bbe5bf5754252016d2b823d7a727332d051bc"
+      },
+      "sdist": {
+        "filename": "apyra_cli-0.1.0.tar.gz",
+        "sha256": "369b1cb37876cf22304b6f6937f24c04b39a71175d4b464a02518a6782abef36"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {
+        "redis": [
+          "redis>=5.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-db",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-db/",
+      "wheel": {
+        "filename": "apyra_db-0.1.0-py3-none-any.whl",
+        "sha256": "a34f3550969c94e1b22b21340b87337077bfbcd806df52291c7b89b620b5df99"
+      },
+      "sdist": {
+        "filename": "apyra_db-0.1.0.tar.gz",
+        "sha256": "d39bb6c7dc1d7ed13038c5d8758bd4dd2e20e914f8ffc59e7587b5aed491dda6"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0",
+        "sqlalchemy>=2.0.30",
+        "greenlet>=3.0.0"
+      ],
+      "optional_extras": {
+        "postgres": [
+          "asyncpg>=0.29.0",
+          "psycopg[binary]>=3.1.0"
+        ],
+        "mysql": [
+          "asyncmy>=0.2.9",
+          "pymysql>=1.1.0"
+        ],
+        "sqlite": [
+          "aiosqlite>=0.20.0"
+        ],
+        "migrations": [
+          "alembic>=1.13.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-domain",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-domain/",
+      "wheel": {
+        "filename": "apyra_domain-0.1.0-py3-none-any.whl",
+        "sha256": "ea10fcc53417b4b614ab2d4289383bf6c660e4108d0af7507e24427cdaab54af"
+      },
+      "sdist": {
+        "filename": "apyra_domain-0.1.0.tar.gz",
+        "sha256": "1d9575848902ebd4c8295591750c5bdcfb8a09d81894a46b49162142ffd1b33c"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra-email",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-email/",
+      "wheel": {
+        "filename": "apyra_email-0.1.0-py3-none-any.whl",
+        "sha256": "a7be731f2e90e533c4194ddc1f3b473e9a3019e8526b7871e7440ff202414f05"
+      },
+      "sdist": {
+        "filename": "apyra_email-0.1.0.tar.gz",
+        "sha256": "a39c1ddc618f2222e03c9df00424d22dc5ef8bc693687a9143b5b52eb02af0ec"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0"
+      ],
+      "optional_extras": {
+        "celery": [
+          "celery>=5.5.0"
+        ],
+        "providers": [
+          "httpx>=0.27.0",
+          "boto3>=1.34.0"
+        ],
+        "sdk": [
+          "sendgrid>=6.0.0",
+          "postmarker>=1.0.0",
+          "sib-api-v3-sdk>=7.0.0",
+          "mailgun>=1.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-events",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-events/",
+      "wheel": {
+        "filename": "apyra_events-0.1.0-py3-none-any.whl",
+        "sha256": "ca9f6424562a793e6f747e7ad6ba3201a984780f0cdc1ee2f403104b827b41d8"
+      },
+      "sdist": {
+        "filename": "apyra_events-0.1.0.tar.gz",
+        "sha256": "81df3c63ce5ecc542f2481c6eb0fd322239ccfa254eb70dd4a1d1c445de20354"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {
+        "redis": [
+          "redis>=5.0.0"
+        ],
+        "rabbitmq": [
+          "aio-pika>=9.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-i18n",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-i18n/",
+      "wheel": {
+        "filename": "apyra_i18n-0.1.0-py3-none-any.whl",
+        "sha256": "5de744b462f0aec578112f4a0500caf638a0983763d5d2dfb2d07f86c5c3db65"
+      },
+      "sdist": {
+        "filename": "apyra_i18n-0.1.0.tar.gz",
+        "sha256": "a20c349ce6d1fec99b97d9c86bb1b189dc11ad28817ce629a7fc3b6933555f8e"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra-messaging",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-messaging/",
+      "wheel": {
+        "filename": "apyra_messaging-0.1.0-py3-none-any.whl",
+        "sha256": "c95007c5984a845e45c8fe1e15b4bce774cb25523a765f44303ee01b93e41c8a"
+      },
+      "sdist": {
+        "filename": "apyra_messaging-0.1.0.tar.gz",
+        "sha256": "31c3c7ba92dc29b84325bcda085da9d253e6c0e2abb266f515b80eb933fc944e"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "apyra-application>=0.1.0,<0.2.0",
+        "apyra-domain>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {
+        "outbox": [
+          "apyra-db>=0.1.0,<0.2.0",
+          "sqlalchemy>=2.0.0"
+        ],
+        "redis": [
+          "redis>=5.0.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-observability",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-observability/",
+      "wheel": {
+        "filename": "apyra_observability-0.1.0-py3-none-any.whl",
+        "sha256": "2d02714a32b498582f6f5936c3ddecca4f1bfca711f0e304a55173a74824f7f9"
+      },
+      "sdist": {
+        "filename": "apyra_observability-0.1.0.tar.gz",
+        "sha256": "f315a05126c2dd6a51774ed100e2217a93f8fda10d097ac6ed77d6b1730c625c"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {
+        "opentelemetry": [
+          "opentelemetry-api>=1.25.0",
+          "opentelemetry-sdk>=1.25.0",
+          "opentelemetry-exporter-otlp-proto-grpc>=1.25.0",
+          "opentelemetry-instrumentation-fastapi>=0.46b0",
+          "opentelemetry-instrumentation-sqlalchemy>=0.46b0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-security",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-security/",
+      "wheel": {
+        "filename": "apyra_security-0.1.0-py3-none-any.whl",
+        "sha256": "eba25869b224e4433e3b4d4f77a84cfd6948301fdc7d12dcdd928e8c093c8d23"
+      },
+      "sdist": {
+        "filename": "apyra_security-0.1.0.tar.gz",
+        "sha256": "11f16bfdd6ede250b34647af2e988c8971aecacdce0e3722a507d8e1f4e2ebd1"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra-storage",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-storage/",
+      "wheel": {
+        "filename": "apyra_storage-0.1.0-py3-none-any.whl",
+        "sha256": "4e6e9ecea78ed57e6e1401f9c872e93b6f33d197a1ca50969261eccc8fdcb03b"
+      },
+      "sdist": {
+        "filename": "apyra_storage-0.1.0.tar.gz",
+        "sha256": "21ca1419b31685040bf88c901f36da9aba8a9c088e13add5ec5a17d85710a729"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "pydantic>=2.8.0",
+        "pydantic-settings>=2.4.0"
+      ],
+      "optional_extras": {
+        "s3": [
+          "boto3>=1.34.0",
+          "botocore"
+        ]
+      }
+    },
+    {
+      "name": "apyra-tasks",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-tasks/",
+      "wheel": {
+        "filename": "apyra_tasks-0.1.0-py3-none-any.whl",
+        "sha256": "fcfb06ab4674643039fe1cb9b63714f01eadeaf18ed812694cbb1e4bd38063ed"
+      },
+      "sdist": {
+        "filename": "apyra_tasks-0.1.0.tar.gz",
+        "sha256": "a22fc88942e35aa402e431dd7829f282b8fc7b1bdb259865d69f3838e0b0a379"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {
+        "celery": [
+          "celery>=5.5.0"
+        ],
+        "scheduler": [
+          "apscheduler>=3.11.0"
+        ],
+        "taskiq": [
+          "taskiq>=0.11.0"
+        ]
+      }
+    },
+    {
+      "name": "apyra-workflow",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-workflow/",
+      "wheel": {
+        "filename": "apyra_workflow-0.1.0-py3-none-any.whl",
+        "sha256": "c069b8c419f8f04f347a53a7fadefdd2ff2a03a5466f88d88e28355d68865d80"
+      },
+      "sdist": {
+        "filename": "apyra_workflow-0.1.0.tar.gz",
+        "sha256": "398b336d3c9511a9b1cd2fd4a5fd28d77f0c57878850eaa5a8d6ac091ba97761"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "apyra-application>=0.1.0,<0.2.0",
+        "apyra-domain>=0.1.0,<0.2.0",
+        "apyra-db>=0.1.0,<0.2.0",
+        "sqlalchemy>=2.0.0"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra-fastapi",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra-fastapi/",
+      "wheel": {
+        "filename": "apyra_fastapi-0.1.0-py3-none-any.whl",
+        "sha256": "9ca169cc218d08d983ce5313c3cd2d340a930081fdd68828affdc248cc004c1f"
+      },
+      "sdist": {
+        "filename": "apyra_fastapi-0.1.0.tar.gz",
+        "sha256": "6f34ad4322521e0736dabd1b028ff4324aa271f00488de3857e57559d34f5e38"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0",
+        "apyra-auth>=0.1.0,<0.2.0",
+        "apyra-security>=0.1.0,<0.2.0",
+        "apyra-observability>=0.1.0,<0.2.0",
+        "fastapi>=0.115.0",
+        "starlette"
+      ],
+      "optional_extras": {}
+    },
+    {
+      "name": "apyra",
+      "version": "0.1.0",
+      "pypi_destination": "https://pypi.org/project/apyra/",
+      "wheel": {
+        "filename": "apyra-0.1.0-py3-none-any.whl",
+        "sha256": "e988bef4a784e8809b0f6b28b4ecb3e5452e0273be4ae7fed9d8853af284081c"
+      },
+      "sdist": {
+        "filename": "apyra-0.1.0.tar.gz",
+        "sha256": "363d1c561c3f3d97d81b6f0473b97af27dd55e37ad0fd86f61ea413cc17f435f"
+      },
+      "dependencies": [
+        "apyra-core>=0.1.0,<0.2.0"
+      ],
+      "optional_extras": {
+        "web": [
+          "apyra-fastapi>=0.1.0,<0.2.0"
+        ],
+        "database": [
+          "apyra-db>=0.1.0,<0.2.0"
+        ],
+        "storage": [
+          "apyra-storage>=0.1.0,<0.2.0"
+        ],
+        "auth": [
+          "apyra-auth>=0.1.0,<0.2.0"
+        ],
+        "cache": [
+          "apyra-cache>=0.1.0,<0.2.0"
+        ],
+        "ai": [
+          "apyra-ai>=0.1.0,<0.2.0"
+        ],
+        "observability": [
+          "apyra-observability>=0.1.0,<0.2.0"
+        ],
+        "email": [
+          "apyra-email>=0.1.0,<0.2.0"
+        ],
+        "channels": [
+          "apyra-channels>=0.1.0,<0.2.0"
+        ],
+        "events": [
+          "apyra-events>=0.1.0,<0.2.0"
+        ],
+        "application": [
+          "apyra-application>=0.1.0,<0.2.0"
+        ],
+        "domain": [
+          "apyra-domain>=0.1.0,<0.2.0"
+        ],
+        "messaging": [
+          "apyra-messaging>=0.1.0,<0.2.0"
+        ],
+        "workflow": [
+          "apyra-workflow>=0.1.0,<0.2.0"
+        ],
+        "security": [
+          "apyra-security>=0.1.0,<0.2.0"
+        ],
+        "tasks": [
+          "apyra-tasks>=0.1.0,<0.2.0"
+        ],
+        "i18n": [
+          "apyra-i18n>=0.1.0,<0.2.0"
+        ],
+        "cli": [
+          "apyra-cli>=0.1.0,<0.2.0"
+        ],
+        "production": [
+          "apyra-fastapi>=0.1.0,<0.2.0",
+          "apyra-observability>=0.1.0,<0.2.0"
+        ],
+        "all": [
+          "apyra-fastapi>=0.1.0,<0.2.0",
+          "apyra-db[sqlite,postgres]>=0.1.0,<0.2.0",
+          "apyra-storage[s3]>=0.1.0,<0.2.0",
+          "apyra-auth[oidc]>=0.1.0,<0.2.0",
+          "apyra-cache[redis,memcached]>=0.1.0,<0.2.0",
+          "apyra-ai[openai]>=0.1.0,<0.2.0",
+          "apyra-observability[opentelemetry]>=0.1.0,<0.2.0",
+          "apyra-email[providers,sdk,celery]>=0.1.0,<0.2.0",
+          "apyra-channels[websocket,redis]>=0.1.0,<0.2.0",
+          "apyra-events[redis,rabbitmq]>=0.1.0,<0.2.0",
+          "apyra-application>=0.1.0,<0.2.0",
+          "apyra-domain>=0.1.0,<0.2.0",
+          "apyra-messaging[outbox,redis]>=0.1.0,<0.2.0",
+          "apyra-workflow>=0.1.0,<0.2.0",
+          "apyra-security>=0.1.0,<0.2.0",
+          "apyra-tasks[celery,scheduler,taskiq]>=0.1.0,<0.2.0",
+          "apyra-i18n>=0.1.0,<0.2.0",
+          "apyra-cli>=0.1.0,<0.2.0"
+        ]
+      }
+    }
+  ],
+  "publication_order": [
+    "apyra-core",
+    "apyra-ai",
+    "apyra-application",
+    "apyra-auth",
+    "apyra-cache",
+    "apyra-channels",
+    "apyra-cli",
+    "apyra-db",
+    "apyra-domain",
+    "apyra-email",
+    "apyra-events",
+    "apyra-i18n",
+    "apyra-messaging",
+    "apyra-observability",
+    "apyra-security",
+    "apyra-storage",
+    "apyra-tasks",
+    "apyra-workflow",
+    "apyra-fastapi",
+    "apyra"
+  ],
+  "trusted_publishing": {
+    "owner": "amariwan",
+    "repository": "apyra",
+    "workflow": "publish.yml",
+    "environment_pattern": "pypi-{suffix}, suffix = 'core' | 'fastapi' | 'meta' | leaf-name"
+  }
+}

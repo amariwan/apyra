@@ -6,6 +6,8 @@ JWT, OAuth2/OIDC, RBAC, and authorization policies for Apyra.
 
 ```bash
 uv add apyra-auth
+uv add "apyra-auth[redis]"             # + distributed token revocation
+uv add "apyra-auth[oidc]"              # + OIDC discovery/userinfo HTTP client
 ```
 
 ## Quick usage
@@ -32,9 +34,25 @@ print(pair.access_token)
 - `AuthSettings`, `get_auth_settings`
 - `JWTAuthenticator`, `get_jwt_authenticator`
 - `TokenService` / `TokenIssuer`, `TokenPair`
-- `RevocationStore`, `InMemoryRevocationStore`
+- `RevocationStore`, `InMemoryRevocationStore`, `RedisRevocationStore`
 - `Policy`, `PolicyEngine`, `RolePolicy`, `ScopePolicy`, `AllOfPolicy`, `AnyOfPolicy`
 - `OAuth2Client`, `OIDCClient`, `discover_oidc`
+
+## Distributed revocation
+
+`InMemoryRevocationStore` is process-local. For multi-instance deployments, install the
+`redis` extra and pass a `RedisRevocationStore` backed by the synchronous Redis client so every
+instance shares revocation state and refresh-token reuse is detected across the fleet:
+
+```python
+import redis
+
+from apyra.auth import AuthSettings, RedisRevocationStore, TokenService
+
+service = TokenService(
+    settings, store=RedisRevocationStore(redis.Redis.from_url("redis://localhost:6379/0"))
+)
+```
 
 ## Security notes
 

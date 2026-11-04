@@ -48,6 +48,48 @@ def test_create_app_is_repeatable() -> None:
     assert first.title == second.title == "Apyra API"
 
 
+def test_create_app_adds_security_headers_by_default() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+    assert response.headers["Permissions-Policy"] == "geolocation=()"
+
+
+def test_create_app_preserves_existing_security_header() -> None:
+    from fastapi import APIRouter
+    from fastapi.responses import Response
+
+    router = APIRouter()
+
+    @router.get("/custom")
+    async def custom() -> Response:
+        return Response(content="ok", headers={"X-Frame-Options": "SAMEORIGIN"})
+
+    app = create_app(routers=[router], settings=Settings(api_prefix=""))
+
+    with TestClient(app) as client:
+        response = client.get("/custom")
+
+    # The route's own value is preserved; only unset headers are added.
+    assert response.headers["X-Frame-Options"] == "SAMEORIGIN"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+
+def test_create_app_can_disable_security_headers() -> None:
+    app = create_app(security_headers=False)
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    assert "X-Frame-Options" not in response.headers
+    assert "X-Content-Type-Options" not in response.headers
+
+
 @pytest.mark.parametrize(
     ("options", "message"),
     [
